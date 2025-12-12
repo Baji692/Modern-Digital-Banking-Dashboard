@@ -175,7 +175,8 @@ const monthExpense = useMemo(() => {
         </section>
 
         <section ref={accountsRef} className="accounts-section">
-          <h3>Your Accounts</h3>
+          <h3 className="section-title">Your Accounts</h3>
+
           <div className="accounts-grid">
             {accounts.map((acc) => {
               const selected = selectedAccountId === acc.id;
@@ -203,7 +204,8 @@ const monthExpense = useMemo(() => {
 
         <section ref={txRef} className="transactions-section">
           <div className="transactions-header">
-            <h3>Recent Transactions</h3>
+            <h3 className="section-title">Recent Transactions</h3>
+
             <div className="tx-controls">
               <input className="tx-search" placeholder="Search merchant or category" value={query} onChange={(e) => setQuery(e.target.value)} />
               <select className="tx-filter" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>

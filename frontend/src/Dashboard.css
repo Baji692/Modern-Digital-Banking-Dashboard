@@ -190,3 +190,13 @@
   .accounts-grid { grid-template-columns: 1fr; }
   .summary-row { flex-direction: column; gap: 12px; }
 }
+
+
+/* Section titles on dark background */
+.section-title {
+  color: #ffffff !important;        /* bright white */
+  font-weight: 700;
+  font-size: 20px;
+  margin: 28px 0 12px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
