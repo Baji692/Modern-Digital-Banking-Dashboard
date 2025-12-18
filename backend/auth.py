@@ -4,8 +4,9 @@ from database import SessionLocal
 from models import User
 from schemas import RegisterUser, LoginUser, ForgotPassword
 from security import hash_password, verify_password
+from sqlalchemy.exc import IntegrityError
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 def get_db():
     db = SessionLocal()
@@ -14,46 +15,59 @@ def get_db():
     finally:
         db.close()
 
-# ---------------- REGISTER ----------------
 @router.post("/register")
 def register(user: RegisterUser, db: Session = Depends(get_db)):
+
+    # Email check
     if db.query(User).filter(User.email == user.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Phone check
+    if db.query(User).filter(User.phone == user.phone).first():
+        raise HTTPException(status_code=400, detail="Phone number already registered")
 
     hashed_pwd = hash_password(user.password)
 
     new_user = User(
         name=user.name,
         email=user.email,
-        password=hashed_pwd,   # ✅ hashed password
+        password=hashed_pwd,
         phone=user.phone
     )
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Email or phone already exists")
 
     return {"message": "User registered successfully"}
 
-# ---------------- LOGIN ----------------
+
 @router.post("/login")
 def login(user: LoginUser, db: Session = Depends(get_db)):
+
     db_user = db.query(User).filter(User.email == user.email).first()
 
     if not db_user or not verify_password(user.password, db_user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     return {
         "message": "Login successful",
-        "user_id": db_user.id
+        "user_id": db_user.id,
+        "kyc_status": db_user.kyc_status
     }
 
-# ---------------- FORGOT PASSWORD ----------------
+
 @router.post("/forgot-password")
 def forgot_password(data: ForgotPassword, db: Session = Depends(get_db)):
+
     user = db.query(User).filter(User.email == data.email).first()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # OTP / email logic will be added later
+    # OTP / email sending will be added later
     return {"message": "Password reset link sent (mock)"}
