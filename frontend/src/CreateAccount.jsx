@@ -65,7 +65,7 @@ function CreateAccount({ navigate }) {
     setLoading(true);
 
     try {
-      await axios.post(`${API_BASE}/register`, {
+      await axios.post(`${API_BASE}/auth/register`, {
         name: fullName,
         email,
         phone,
