@@ -1,11 +1,14 @@
 // CreateAccount.jsx
 import React, { useState, useMemo } from "react";
+import { toast } from "react-toastify";
 import axios from "axios";
 import "./App.css";
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
 
 const API_BASE = "http://127.0.0.1:8000";
+
+/* ---------------- HELPERS ---------------- */
 
 function evaluateStrength(pw) {
   let score = 0;
@@ -23,6 +26,12 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function isValidIndianPhone(phone) {
+  return /^[6-9]\d{9}$/.test(phone);
+}
+
+/* ---------------- COMPONENT ---------------- */
+
 function CreateAccount({ navigate }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,33 +44,62 @@ function CreateAccount({ navigate }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const strength = useMemo(() => evaluateStrength(password), [password]);
 
-  const phoneValid = phone.length === 10;
-  const phoneTooShort = phone.length > 0 && phone.length < 10;
+  /* ---------- PHONE STATE (EXCLUSIVE) ---------- */
+
+  const phoneLength = phone.length;
+  const phoneIsComplete = phoneLength === 10;
+  const phoneIsValid = phoneIsComplete && isValidIndianPhone(phone);
+
+  const showPhoneTooShort = phoneLength > 0 && phoneLength < 10;
+  const showPhoneError =
+    phoneIsComplete && !phoneIsValid && errors.phone;
+  const showPhoneSuccess =
+    phoneIsValid && !errors.phone;
+
+  /* ---------------- VALIDATION ---------------- */
 
   const validateAll = () => {
     const e = {};
+
     if (!fullName.trim()) e.fullName = "Please enter your full name.";
+
     if (!email.trim()) e.email = "Please enter your email.";
     else if (!isValidEmail(email)) e.email = "Please enter a valid email.";
-    if (!phone) e.phone = "Please enter phone number.";
-    else if (phone.length !== 10) e.phone = "Phone number must be 10 digits.";
+
+    if (!phone) {
+      e.phone = "Please enter phone number.";
+    } else if (phone.length !== 10) {
+      e.phone = "Phone number must be 10 digits.";
+    } else if (!isValidIndianPhone(phone)) {
+      e.phone = "Phone number must start with 6, 7, 8, or 9.";
+    }
+
     if (!password) e.password = "Please create a password.";
-    else if (password.length < 8) e.password = "Password must be at least 8 characters.";
+    else if (password.length < 8)
+      e.password = "Password must be at least 8 characters.";
+
     if (!confirm) e.confirm = "Please re-enter your password.";
-    if (password && confirm && password !== confirm) e.confirm = "Passwords do not match.";
+    if (password && confirm && password !== confirm)
+      e.confirm = "Passwords do not match.";
+
     if (!agree) e.agree = "You must accept the Terms & Privacy Policy.";
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
+  /* ---------------- SUBMIT ---------------- */
+
   const handleCreate = async () => {
-    if (!validateAll()) return;
-    setServerError("");
+    if (!validateAll()) {
+      toast.error("Please fix the highlighted errors");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -72,14 +110,20 @@ function CreateAccount({ navigate }) {
         password,
       });
 
-      navigate("login");
+      toast.success("Account created successfully 🎉");
+
+      setTimeout(() => {
+        navigate("login");
+      }, 1500);
     } catch (err) {
       const msg = err?.response?.data?.detail || "Registration failed";
-      setServerError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  /* ---------------- UI ---------------- */
 
   return (
     <div className="app-root">
@@ -98,8 +142,6 @@ function CreateAccount({ navigate }) {
             Join FinBank and start your digital banking journey.
           </p>
 
-          {serverError && <div className="form-error">{serverError}</div>}
-
           {/* Full Name */}
           <div className="field-group">
             <label className="field-label">Full Name</label>
@@ -108,7 +150,6 @@ function CreateAccount({ navigate }) {
               <input
                 type="text"
                 className="field-input"
-                placeholder="Enter your full name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
               />
@@ -124,7 +165,6 @@ function CreateAccount({ navigate }) {
               <input
                 type="email"
                 className="field-input"
-                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -135,32 +175,30 @@ function CreateAccount({ navigate }) {
           {/* Phone */}
           <div className="field-group">
             <label className="field-label">Phone Number</label>
-            <div
-              className={`field-input-wrapper ${
-                phoneValid ? "phone-valid" : phoneTooShort ? "phone-invalid" : ""
-              }`}
-            >
+            <div className="field-input-wrapper">
               <span className="field-icon">📱</span>
               <input
                 type="tel"
                 className="field-input"
-                placeholder="10-digit mobile number"
                 value={phone}
                 maxLength={10}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "");
-                  setPhone(val);
-                  setErrors((p) => ({ ...p, phone: undefined }));
-                }}
+                onChange={(e) =>
+                  setPhone(e.target.value.replace(/\D/g, ""))
+                }
               />
             </div>
-            {phoneTooShort && (
+
+            {showPhoneTooShort && (
               <div className="form-error">Enter exactly 10 digits</div>
             )}
-            {phoneValid && (
+
+            {showPhoneError && (
+              <div className="form-error">{errors.phone}</div>
+            )}
+
+            {showPhoneSuccess && (
               <div className="form-success">Valid phone number ✓</div>
             )}
-            {errors.phone && <div className="form-error">{errors.phone}</div>}
           </div>
 
           {/* Password */}
@@ -171,7 +209,6 @@ function CreateAccount({ navigate }) {
               <input
                 type={showPassword ? "text" : "password"}
                 className="field-input"
-                placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -205,7 +242,6 @@ function CreateAccount({ navigate }) {
               <input
                 type={showConfirm ? "text" : "password"}
                 className="field-input"
-                placeholder="Re-enter your password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
               />
@@ -224,7 +260,6 @@ function CreateAccount({ navigate }) {
             {confirm && password !== confirm && (
               <div className="form-error">Passwords do not match</div>
             )}
-            {errors.confirm && <div className="form-error">{errors.confirm}</div>}
           </div>
 
           {/* Terms */}

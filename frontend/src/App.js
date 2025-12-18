@@ -2,6 +2,9 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
+import { ToastContainer, toast } from "react-toastify"; // 🟢 toast
+import "react-toastify/dist/ReactToastify.css";
+
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
 
@@ -27,13 +30,11 @@ function LoginPage({ onLogin, navigate }) {
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [apiError, setApiError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
     setEmailError("");
     setPasswordError("");
-    setApiError("");
 
     let valid = true;
 
@@ -64,7 +65,7 @@ function LoginPage({ onLogin, navigate }) {
       const data = await res.json();
 
       if (!res.ok) {
-        setApiError(data.detail || "Invalid credentials");
+        toast.error(data.detail || "Invalid email or password ❌");
         setLoading(false);
         return;
       }
@@ -79,9 +80,11 @@ function LoginPage({ onLogin, navigate }) {
       // ✅ persist session
       localStorage.setItem("finbank_user", JSON.stringify(userData));
 
+      toast.success(`Welcome back, ${data.name}! 🎉`); // 🟢 toast
+
       onLogin(userData);
     } catch (err) {
-      setApiError("Server not reachable");
+      toast.error("Server not reachable 🚫"); // 🟢 toast
     } finally {
       setLoading(false);
     }
@@ -104,7 +107,7 @@ function LoginPage({ onLogin, navigate }) {
           <h1 className="signin-title">Welcome Back</h1>
           <p className="signin-subtitle">Sign in to your Banking Dashboard</p>
 
-          {apiError && <div className="form-error">{apiError}</div>}
+          
 
           {/* EMAIL */}
           <div className="field-group">
@@ -208,34 +211,37 @@ function App() {
     setScreen("login");
   };
 
-  switch (screen) {
-    case "login":
-      return <LoginPage onLogin={handleLogin} navigate={navigate} />;
+  return (
+    <>
+      {/* 🟢 Toast container (ONLY ONCE) */}
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
-    case "create":
-      return <CreateAccount navigate={navigate} />;
-
-    case "resetEmail":
-      return <ResetPasswordEmail navigate={navigate} />;
-
-    case "resetOtp":
-      return <ResetPasswordOtp navigate={navigate} />;
-
-    case "resetNewPassword":
-      return <ResetPasswordNewPassword navigate={navigate} />;
-
-    case "dashboard":
-      return (
-        <Dashboard
-          navigate={navigate}
-          user={user}
-          logout={handleLogout}
-        />
-      );
-
-    default:
-      return <LoginPage onLogin={handleLogin} navigate={navigate} />;
-  }
+      {(() => {
+        switch (screen) {
+          case "login":
+            return <LoginPage onLogin={handleLogin} navigate={navigate} />;
+          case "create":
+            return <CreateAccount navigate={navigate} />;
+          case "resetEmail":
+            return <ResetPasswordEmail navigate={navigate} />;
+          case "resetOtp":
+            return <ResetPasswordOtp navigate={navigate} />;
+          case "resetNewPassword":
+            return <ResetPasswordNewPassword navigate={navigate} />;
+          case "dashboard":
+            return (
+              <Dashboard
+                navigate={navigate}
+                user={user}
+                logout={handleLogout}
+              />
+            );
+          default:
+            return <LoginPage onLogin={handleLogin} navigate={navigate} />;
+        }
+      })()}
+    </>
+  );
 }
 
 export default App;
