@@ -1,0 +1,4 @@
+description,category,amount,currency,txn_type,merchant,txn_date,posted_date
+Grocery Shopping,Food,125.50,INR,debit,Whole Foods,2024-12-01T10:00:00,2024-12-01T12:00:00
+Salary Credit,Income,45000,INR,credit,Employer Inc,2024-11-30T09:00:00,2024-11-30T09:30:00
+Electricity Bill,Utilities,1890,INR,debit,City Power,2024-12-02T08:00:00,2024-12-02T09:00:00
