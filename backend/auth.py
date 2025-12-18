@@ -18,32 +18,33 @@ def get_db():
 @router.post("/register")
 def register(user: RegisterUser, db: Session = Depends(get_db)):
 
-    # Email check
+    # Check email
     if db.query(User).filter(User.email == user.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
 
-    # Phone check
+    # Check phone
     if db.query(User).filter(User.phone == user.phone).first():
-        raise HTTPException(status_code=400, detail="Phone number already registered")
-
-    hashed_pwd = hash_password(user.password)
+        raise HTTPException(
+            status_code=400,
+            detail="Phone number already registered"
+        )
 
     new_user = User(
         name=user.name,
         email=user.email,
-        password=hashed_pwd,
-        phone=user.phone
+        phone=user.phone,
+        password=hash_password(user.password),
     )
 
-    try:
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="Email or phone already exists")
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
     return {"message": "User registered successfully"}
+
 
 
 @router.post("/login")
