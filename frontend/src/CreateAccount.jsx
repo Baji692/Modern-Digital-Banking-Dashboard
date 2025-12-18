@@ -48,17 +48,15 @@ function CreateAccount({ navigate }) {
 
   const strength = useMemo(() => evaluateStrength(password), [password]);
 
-  /* ---------- PHONE STATE (EXCLUSIVE) ---------- */
+  /* ---------------- PHONE STATES ---------------- */
 
   const phoneLength = phone.length;
-  const phoneIsComplete = phoneLength === 10;
-  const phoneIsValid = phoneIsComplete && isValidIndianPhone(phone);
+  const phoneComplete = phoneLength === 10;
+  const phoneValid = phoneComplete && isValidIndianPhone(phone);
 
   const showPhoneTooShort = phoneLength > 0 && phoneLength < 10;
-  const showPhoneError =
-    phoneIsComplete && !phoneIsValid && errors.phone;
-  const showPhoneSuccess =
-    phoneIsValid && !errors.phone;
+  const showPhoneError = phoneComplete && !phoneValid && errors.phone;
+  const showPhoneSuccess = phoneValid && !errors.phone;
 
   /* ---------------- VALIDATION ---------------- */
 
@@ -70,13 +68,10 @@ function CreateAccount({ navigate }) {
     if (!email.trim()) e.email = "Please enter your email.";
     else if (!isValidEmail(email)) e.email = "Please enter a valid email.";
 
-    if (!phone) {
-      e.phone = "Please enter phone number.";
-    } else if (phone.length !== 10) {
-      e.phone = "Phone number must be 10 digits.";
-    } else if (!isValidIndianPhone(phone)) {
+    if (!phone) e.phone = "Please enter phone number.";
+    else if (phone.length !== 10) e.phone = "Phone number must be 10 digits.";
+    else if (!isValidIndianPhone(phone))
       e.phone = "Phone number must start with 6, 7, 8, or 9.";
-    }
 
     if (!password) e.password = "Please create a password.";
     else if (password.length < 8)
@@ -112,9 +107,7 @@ function CreateAccount({ navigate }) {
 
       toast.success("Account created successfully 🎉");
 
-      setTimeout(() => {
-        navigate("login");
-      }, 1500);
+      setTimeout(() => navigate("login"), 1500);
     } catch (err) {
       const msg = err?.response?.data?.detail || "Registration failed";
       toast.error(msg);
@@ -150,6 +143,7 @@ function CreateAccount({ navigate }) {
               <input
                 type="text"
                 className="field-input"
+                placeholder="Enter your full name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
               />
@@ -165,6 +159,7 @@ function CreateAccount({ navigate }) {
               <input
                 type="email"
                 className="field-input"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -180,8 +175,9 @@ function CreateAccount({ navigate }) {
               <input
                 type="tel"
                 className="field-input"
-                value={phone}
+                placeholder="10-digit mobile number"
                 maxLength={10}
+                value={phone}
                 onChange={(e) =>
                   setPhone(e.target.value.replace(/\D/g, ""))
                 }
@@ -209,6 +205,7 @@ function CreateAccount({ navigate }) {
               <input
                 type={showPassword ? "text" : "password"}
                 className="field-input"
+                placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -242,6 +239,7 @@ function CreateAccount({ navigate }) {
               <input
                 type={showConfirm ? "text" : "password"}
                 className="field-input"
+                placeholder="Re-enter your password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
               />
