@@ -4,9 +4,7 @@ from database import SessionLocal
 from models import User
 from schemas import RegisterUser, LoginUser, ForgotPassword
 from security import hash_password, verify_password
-from sqlalchemy.exc import IntegrityError
 
-# router = APIRouter(prefix="/auth", tags=["Auth"])
 router = APIRouter()
 
 
@@ -46,7 +44,10 @@ def register(user: RegisterUser, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    return {"message": "User registered successfully"}
+    return {
+        "message": "User registered successfully",
+        "user_id": new_user.id
+    }
 
 
 @router.post("/login")
@@ -56,11 +57,16 @@ def login(user: LoginUser, db: Session = Depends(get_db)):
 
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(
-            status_code=401, detail="Invalid email or password")
+            status_code=401,
+            detail="Invalid email or password"
+        )
 
+    # ✅ IMPORTANT FIX: return full user info needed by frontend
     return {
         "message": "Login successful",
         "user_id": db_user.id,
+        "name": db_user.name,
+        "email": db_user.email,
         "kyc_status": db_user.kyc_status
     }
 
@@ -73,5 +79,4 @@ def forgot_password(data: ForgotPassword, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # OTP / email sending will be added later
     return {"message": "Password reset link sent (mock)"}
