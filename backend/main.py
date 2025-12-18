@@ -1,10 +1,15 @@
 from fastapi import FastAPI
-from auth import router
-from database import engine
-import models
+from fastapi.middleware.cors import CORSMiddleware
+from auth import router as auth_router
 
-models.Base.metadata.create_all(bind=engine)
+app = FastAPI()
 
-app = FastAPI(title="Bank Dashboard Backend")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React app
+    allow_credentials=True,
+    allow_methods=["*"],  # enables OPTIONS
+    allow_headers=["*"],
+)
 
-app.include_router(router)
+app.include_router(auth_router, prefix="/auth")
