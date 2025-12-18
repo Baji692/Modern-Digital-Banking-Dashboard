@@ -834,3 +834,47 @@ button[disabled] {
   margin-top: 8px;
 }
 
+.phone-input {
+  transition: border 0.3s ease, box-shadow 0.3s ease;
+}
+
+.phone-invalid {
+  border: 2px solid #ff4d4f;
+  box-shadow: 0 0 6px rgba(255, 77, 79, 0.7);
+  animation: shake 0.25s ease-in-out;
+}
+
+.phone-valid {
+  border: 2px solid #28a745;
+  box-shadow: 0 0 8px rgba(40, 167, 69, 0.8);
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+.phone-valid {
+  border: 2px solid #28a745;
+  animation: pulseGreen 1.2s infinite;
+}
+
+.phone-invalid {
+  border: 2px solid #dc3545;
+  animation: pulseRed 1.2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { box-shadow: 0 0 0 0 rgba(40,167,69,.6); }
+  70% { box-shadow: 0 0 0 6px rgba(40,167,69,0); }
+  100% { box-shadow: 0 0 0 0 rgba(40,167,69,0); }
+}
+
+@keyframes pulseRed {
+  0% { box-shadow: 0 0 0 0 rgba(220,53,69,.6); }
+  70% { box-shadow: 0 0 0 6px rgba(220,53,69,0); }
+  100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+}

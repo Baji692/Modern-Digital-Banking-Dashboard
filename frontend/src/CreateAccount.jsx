@@ -1,9 +1,11 @@
 // CreateAccount.jsx
 import React, { useState, useMemo } from "react";
+import axios from "axios";
 import "./App.css";
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
-
 import bankIcon from "./bank.png";
+
+const API_BASE = "http://127.0.0.1:8000";
 
 function evaluateStrength(pw) {
   let score = 0;
@@ -22,31 +24,34 @@ function isValidEmail(email) {
 }
 
 function CreateAccount({ navigate }) {
-  // form state
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [agree, setAgree] = useState(false);
 
-  // visibility toggles
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // errors
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const strength = useMemo(() => evaluateStrength(password), [password]);
 
-  const passwordsMatch = password && confirm && password === confirm;
+  const phoneValid = phone.length === 10;
+  const phoneTooShort = phone.length > 0 && phone.length < 10;
 
   const validateAll = () => {
     const e = {};
     if (!fullName.trim()) e.fullName = "Please enter your full name.";
     if (!email.trim()) e.email = "Please enter your email.";
     else if (!isValidEmail(email)) e.email = "Please enter a valid email.";
+    if (!phone) e.phone = "Please enter phone number.";
+    else if (phone.length !== 10) e.phone = "Phone number must be 10 digits.";
     if (!password) e.password = "Please create a password.";
-    else if (password.length < 8) e.password = "Password should be at least 8 characters.";
+    else if (password.length < 8) e.password = "Password must be at least 8 characters.";
     if (!confirm) e.confirm = "Please re-enter your password.";
     if (password && confirm && password !== confirm) e.confirm = "Passwords do not match.";
     if (!agree) e.agree = "You must accept the Terms & Privacy Policy.";
@@ -54,20 +59,34 @@ function CreateAccount({ navigate }) {
     return Object.keys(e).length === 0;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!validateAll()) return;
+    setServerError("");
+    setLoading(true);
 
-    // Here you would call the API to create account.
-    // For prototype, we navigate back to login.
-    navigate && navigate("login");
+    try {
+      await axios.post(`${API_BASE}/register`, {
+        name: fullName,
+        email,
+        phone,
+        password,
+      });
+
+      navigate("login");
+    } catch (err) {
+      const msg = err?.response?.data?.detail || "Registration failed";
+      setServerError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="app-root">
-         {/* Top-left Logo */}
-  <div className="top-left-logo">
-    <img src={finBankLogo} alt="FinBank Logo" className="top-logo-img" />
-  </div>
+      <div className="top-left-logo">
+        <img src={finBankLogo} alt="FinBank Logo" className="top-logo-img" />
+      </div>
+
       <div className="auth-card-single">
         <section className="signin-pane">
           <div className="signin-logo-circle">
@@ -78,6 +97,8 @@ function CreateAccount({ navigate }) {
           <p className="signin-subtitle">
             Join FinBank and start your digital banking journey.
           </p>
+
+          {serverError && <div className="form-error">{serverError}</div>}
 
           {/* Full Name */}
           <div className="field-group">
@@ -90,7 +111,6 @@ function CreateAccount({ navigate }) {
                 placeholder="Enter your full name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                autoComplete="name"
               />
             </div>
             {errors.fullName && <div className="form-error">{errors.fullName}</div>}
@@ -107,14 +127,40 @@ function CreateAccount({ navigate }) {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                onBlur={() => {
-                  if (email && !isValidEmail(email)) setErrors((p) => ({ ...p, email: "Invalid email." }));
-                  else setErrors((p) => ({ ...p, email: undefined }));
-                }}
               />
             </div>
             {errors.email && <div className="form-error">{errors.email}</div>}
+          </div>
+
+          {/* Phone */}
+          <div className="field-group">
+            <label className="field-label">Phone Number</label>
+            <div
+              className={`field-input-wrapper ${
+                phoneValid ? "phone-valid" : phoneTooShort ? "phone-invalid" : ""
+              }`}
+            >
+              <span className="field-icon">📱</span>
+              <input
+                type="tel"
+                className="field-input"
+                placeholder="10-digit mobile number"
+                value={phone}
+                maxLength={10}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  setPhone(val);
+                  setErrors((p) => ({ ...p, phone: undefined }));
+                }}
+              />
+            </div>
+            {phoneTooShort && (
+              <div className="form-error">Enter exactly 10 digits</div>
+            )}
+            {phoneValid && (
+              <div className="form-success">Valid phone number ✓</div>
+            )}
+            {errors.phone && <div className="form-error">{errors.phone}</div>}
           </div>
 
           {/* Password */}
@@ -122,33 +168,24 @@ function CreateAccount({ navigate }) {
             <label className="field-label">Password</label>
             <div className="field-input-wrapper">
               <span className="field-icon">🔒</span>
-
               <input
                 type={showPassword ? "text" : "password"}
                 className="field-input"
                 placeholder="Create a password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  // clear confirm mismatch while typing
-                  setErrors((p) => ({ ...p, confirm: undefined, password: undefined }));
-                }}
-                autoComplete="new-password"
+                onChange={(e) => setPassword(e.target.value)}
               />
-
               <button
                 type="button"
                 className="field-password-toggle"
                 onClick={() => setShowPassword((s) => !s)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "🙈" : "👁️"}
               </button>
             </div>
 
-            {/* strength meter */}
             <div className="pw-strength-row">
-              <div className={"pw-strength-bar pw-strength-" + strength.label.toLowerCase()}>
+              <div className={`pw-strength-bar pw-strength-${strength.label.toLowerCase()}`}>
                 <div
                   className="pw-strength-fill"
                   style={{ width: `${(strength.score / 4) * 100}%` }}
@@ -160,56 +197,43 @@ function CreateAccount({ navigate }) {
             {errors.password && <div className="form-error">{errors.password}</div>}
           </div>
 
-          {/* Confirm Password */}
+          {/* Confirm */}
           <div className="field-group">
             <label className="field-label">Confirm Password</label>
             <div className="field-input-wrapper">
               <span className="field-icon">🔒</span>
-
               <input
                 type={showConfirm ? "text" : "password"}
                 className="field-input"
                 placeholder="Re-enter your password"
                 value={confirm}
-                onChange={(e) => {
-                  setConfirm(e.target.value);
-                  setErrors((p) => ({ ...p, confirm: undefined }));
-                }}
-                autoComplete="new-password"
+                onChange={(e) => setConfirm(e.target.value)}
               />
-
               <button
                 type="button"
                 className="field-password-toggle"
                 onClick={() => setShowConfirm((c) => !c)}
-                aria-label={showConfirm ? "Hide password" : "Show password"}
               >
                 {showConfirm ? "🙈" : "👁️"}
               </button>
             </div>
 
-            {/* match indicator */}
-            {confirm ? (
-              passwordsMatch ? (
-                <div className="form-success">Passwords match ✓</div>
-              ) : (
-                <div className="form-error">Passwords do not match</div>
-              )
-            ) : null}
-
+            {confirm && password === confirm && (
+              <div className="form-success">Passwords match ✓</div>
+            )}
+            {confirm && password !== confirm && (
+              <div className="form-error">Passwords do not match</div>
+            )}
             {errors.confirm && <div className="form-error">{errors.confirm}</div>}
           </div>
 
-          {/* Terms Checkbox */}
+          {/* Terms */}
           <div className="terms-row">
             <label className="terms-label">
               <input
                 type="checkbox"
                 checked={agree}
-                onChange={(e) => {
-                  setAgree(e.target.checked);
-                  setErrors((p) => ({ ...p, agree: undefined }));
-                }}
+                onChange={(e) => setAgree(e.target.checked)}
               />
               <span>
                 I agree to the <b>Terms & Privacy Policy</b>
@@ -218,20 +242,14 @@ function CreateAccount({ navigate }) {
             {errors.agree && <div className="form-error">{errors.agree}</div>}
           </div>
 
-          {/* Create Account Button */}
           <button
             className="primary-button"
             onClick={handleCreate}
-            disabled={!fullName || !email || !password || !confirm || !agree}
-            style={{
-              opacity: !fullName || !email || !password || !confirm || !agree ? 0.6 : 1,
-              cursor: !fullName || !email || !password || !confirm || !agree ? "not-allowed" : "pointer",
-            }}
+            disabled={loading}
           >
-            Create Account
+            {loading ? "Creating..." : "Create Account"}
           </button>
 
-          {/* Footer */}
           <div className="signin-footer">
             <span>Already have an account?</span>
             <button className="link-button" onClick={() => navigate("login")}>
