@@ -1,55 +1,18 @@
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-from enum import Enum
+from sqlalchemy import Column, Integer, String, Enum, TIMESTAMP
+from database import Base
+import enum
 
-
-class KYCStatus(str, Enum):
+class KycStatus(enum.Enum):
     unverified = "unverified"
     verified = "verified"
 
+class User(Base):
+    __tablename__ = "users"
 
-class AccountType(str, Enum):
-    savings = "savings"
-    checking = "checking"
-    credit_card = "credit_card"
-    loan = "loan"
-    investment = "investment"
-
-
-class TxnType(str, Enum):
-    debit = "debit"
-    credit = "credit"
-
-
-class User(BaseModel):
-    id: int
-    name: str
-    email: str
-    phone: Optional[str]
-    kyc_status: KYCStatus
-    created_at: datetime
-
-
-class Account(BaseModel):
-    id: int
-    user_id: int
-    bank_name: str
-    account_type: AccountType
-    masked_account: str
-    currency: str
-    balance: float
-    created_at: datetime
-
-
-class Transaction(BaseModel):
-    id: int
-    account_id: int
-    description: str
-    category: str
-    amount: float
-    currency: str
-    txn_type: TxnType
-    merchant: str
-    txn_date: datetime
-    posted_date: datetime
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    email = Column(String, unique=True)
+    password = Column(String)
+    phone = Column(String)
+    kyc_status = Column(Enum(KycStatus), default=KycStatus.unverified)
+    created_at = Column(TIMESTAMP)
