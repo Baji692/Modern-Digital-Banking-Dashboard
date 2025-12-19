@@ -1,5 +1,6 @@
 // ResetPasswordNewPassword.jsx
 import React, { useMemo, useState } from "react";
+import { toast } from "react-toastify"; // ✅ added
 import "./App.css";
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
@@ -26,32 +27,53 @@ function ResetPasswordNewPassword({ navigate }) {
   const [errors, setErrors] = useState({});
   const strength = useMemo(() => evaluateStrength(newPassword), [newPassword]);
 
-  const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
+  const passwordsMatch =
+    newPassword && confirmPassword && newPassword === confirmPassword;
 
   const validateAll = () => {
     const e = {};
     if (!newPassword) e.newPassword = "Please enter a new password.";
-    else if (newPassword.length < 8) e.newPassword = "Password must be at least 8 characters.";
-    if (!confirmPassword) e.confirmPassword = "Please confirm your new password.";
+    else if (newPassword.length < 8)
+      e.newPassword = "Password must be at least 8 characters.";
+    if (!confirmPassword)
+      e.confirmPassword = "Please confirm your new password.";
     if (newPassword && confirmPassword && newPassword !== confirmPassword)
       e.confirmPassword = "Passwords do not match.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSetPassword = () => {
-    if (!validateAll()) return;
+  const handleSetPassword = async () => {
+    if (!validateAll()) {
+      toast.error("Please fix the errors before continuing");
+      return;
+    }
 
-    // Replace with API integration (verify OTP + set new password).
-    // For prototype, just navigate to login after success:
-    navigate && navigate("login");
+    if (strength.label === "Weak") {
+      toast.error("Please choose a stronger password");
+      return;
+    }
+
+    try {
+      // 🔁 Replace with real API later:
+      // await axios.post("/auth/reset-password", {...})
+
+      toast.success("Password reset successfully 🔐");
+
+      setTimeout(() => {
+        navigate && navigate("login");
+      }, 1500);
+    } catch (err) {
+      toast.error("Failed to reset password. Try again.");
+    }
   };
 
   return (
     <div className="app-root">
-          <div className="top-left-logo">
-    <img src={finBankLogo} alt="FinBank Logo" className="top-logo-img" />
-  </div>
+      <div className="top-left-logo">
+        <img src={finBankLogo} alt="FinBank Logo" className="top-logo-img" />
+      </div>
+
       <div className="auth-card-single">
         <section className="signin-pane">
           <div className="signin-logo-circle">
@@ -73,8 +95,11 @@ function ResetPasswordNewPassword({ navigate }) {
                 value={newPassword}
                 onChange={(e) => {
                   setNewPassword(e.target.value);
-                  // clear errors related to password while typing
-                  setErrors((p) => ({ ...p, newPassword: undefined, confirmPassword: undefined }));
+                  setErrors((p) => ({
+                    ...p,
+                    newPassword: undefined,
+                    confirmPassword: undefined,
+                  }));
                 }}
                 autoComplete="new-password"
               />
@@ -90,7 +115,12 @@ function ResetPasswordNewPassword({ navigate }) {
 
             {/* strength meter */}
             <div className="pw-strength-row" style={{ marginTop: 8 }}>
-              <div className={"pw-strength-bar pw-strength-" + strength.label.toLowerCase()}>
+              <div
+                className={
+                  "pw-strength-bar pw-strength-" +
+                  strength.label.toLowerCase()
+                }
+              >
                 <div
                   className="pw-strength-fill"
                   style={{ width: `${(strength.score / 4) * 100}%` }}
@@ -99,7 +129,9 @@ function ResetPasswordNewPassword({ navigate }) {
               <div className="pw-strength-text">{strength.label}</div>
             </div>
 
-            {errors.newPassword && <div className="form-error">{errors.newPassword}</div>}
+            {errors.newPassword && (
+              <div className="form-error">{errors.newPassword}</div>
+            )}
           </div>
 
           {/* Confirm New Password */}
@@ -114,7 +146,10 @@ function ResetPasswordNewPassword({ navigate }) {
                 value={confirmPassword}
                 onChange={(e) => {
                   setConfirmPassword(e.target.value);
-                  setErrors((p) => ({ ...p, confirmPassword: undefined }));
+                  setErrors((p) => ({
+                    ...p,
+                    confirmPassword: undefined,
+                  }));
                 }}
                 autoComplete="new-password"
               />
@@ -137,7 +172,9 @@ function ResetPasswordNewPassword({ navigate }) {
               )
             ) : null}
 
-            {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
+            {errors.confirmPassword && (
+              <div className="form-error">{errors.confirmPassword}</div>
+            )}
           </div>
 
           <button
@@ -145,8 +182,12 @@ function ResetPasswordNewPassword({ navigate }) {
             onClick={handleSetPassword}
             disabled={!newPassword || !confirmPassword || !passwordsMatch}
             style={{
-              opacity: !newPassword || !confirmPassword || !passwordsMatch ? 0.6 : 1,
-              cursor: !newPassword || !confirmPassword || !passwordsMatch ? "not-allowed" : "pointer",
+              opacity:
+                !newPassword || !confirmPassword || !passwordsMatch ? 0.6 : 1,
+              cursor:
+                !newPassword || !confirmPassword || !passwordsMatch
+                  ? "not-allowed"
+                  : "pointer",
             }}
           >
             Set Password

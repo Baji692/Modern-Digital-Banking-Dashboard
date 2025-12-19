@@ -1,5 +1,6 @@
 // ResetPasswordOtp.js
 import React, { useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify"; // ✅ added
 import "./App.css";
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
@@ -17,7 +18,6 @@ export default function ResetPasswordOtp({ navigate }) {
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const timerRef = useRef(null);
 
-  // focus first input on mount & start timer
   useEffect(() => {
     inputsRef.current[0] && inputsRef.current[0].focus();
     startTimer();
@@ -25,7 +25,6 @@ export default function ResetPasswordOtp({ navigate }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // timer helpers
   const startTimer = () => {
     stopTimer();
     setSecondsLeft(RESEND_SECONDS);
@@ -54,7 +53,6 @@ export default function ResetPasswordOtp({ navigate }) {
     return `${mm}:${ss.toString().padStart(2, "0")}`;
   };
 
-  // update otp value
   const updateOtpAt = (idx, val) => {
     setOtp((prev) => {
       const copy = [...prev];
@@ -82,12 +80,10 @@ export default function ResetPasswordOtp({ navigate }) {
     }
   };
 
-  // handle keys from input (Backspace, Arrows, Enter)
   const handleInputKeyDown = (e, idx) => {
     const key = e.key;
 
     if (key === "Enter") {
-      // If Enter pressed while focused on any input, attempt submit
       e.preventDefault();
       handleSubmit();
       return;
@@ -138,7 +134,8 @@ export default function ResetPasswordOtp({ navigate }) {
       return copy;
     });
 
-    const focusIndex = digits.length < OTP_LENGTH ? digits.length : OTP_LENGTH - 1;
+    const focusIndex =
+      digits.length < OTP_LENGTH ? digits.length : OTP_LENGTH - 1;
     setTimeout(() => {
       inputsRef.current[focusIndex]?.focus();
     }, 0);
@@ -152,19 +149,21 @@ export default function ResetPasswordOtp({ navigate }) {
     setInfo("");
 
     if (!isComplete) {
+      toast.error("Please enter the full 6-digit OTP");
       setError("Please enter the full 6-digit code.");
       return;
     }
 
-    // Replace with real verification call
     setInfo("Verifying...");
+
+    // 🔁 Replace with real API later
     setTimeout(() => {
       setInfo("");
+      toast.success("OTP verified successfully ✅");
       navigate && navigate("resetNewPassword");
-    }, 500);
+    }, 600);
   };
 
-  // Mock sendOtp (replace with API)
   const sendOtp = async () => {
     return new Promise((resolve) => {
       setTimeout(() => resolve(true), 700);
@@ -173,11 +172,14 @@ export default function ResetPasswordOtp({ navigate }) {
 
   const handleResend = async () => {
     if (secondsLeft > 0) return;
+
     setError("");
     setInfo("Resending OTP...");
+
     const ok = await sendOtp();
 
     if (ok) {
+      toast.success("OTP sent successfully 📧");
       setInfo("OTP sent");
       setOtp(Array(OTP_LENGTH).fill(""));
       setTimeout(() => {
@@ -186,11 +188,11 @@ export default function ResetPasswordOtp({ navigate }) {
       startTimer();
       setTimeout(() => setInfo(""), 2000);
     } else {
+      toast.error("Failed to resend OTP");
       setError("Failed to resend OTP. Try again.");
     }
   };
 
-  // Also allow Enter to submit when focus is not on inputs: attach keydown to container
   const containerKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -199,15 +201,14 @@ export default function ResetPasswordOtp({ navigate }) {
   };
 
   useEffect(() => {
-    // attach keydown on mount to catch Enter when focus outside
     document.addEventListener("keydown", containerKeyDown);
-    return () => document.removeEventListener("keydown", containerKeyDown);
+    return () =>
+      document.removeEventListener("keydown", containerKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
 
   return (
     <div className="app-root">
-      {/* Top-left Logo */}
       <div className="top-left-logo" aria-hidden>
         <img src={finBankLogo} alt="FinBank Logo" className="top-logo-img" />
       </div>
@@ -219,7 +220,9 @@ export default function ResetPasswordOtp({ navigate }) {
           </div>
 
           <h1 className="signin-title">Reset Password</h1>
-          <p className="signin-subtitle">Enter the OTP received through your email address</p>
+          <p className="signin-subtitle">
+            Enter the OTP received through your email address
+          </p>
 
           <div
             className="otp-row"
@@ -246,16 +249,20 @@ export default function ResetPasswordOtp({ navigate }) {
             ))}
           </div>
 
-          {/* info (non-error) */}
           {info && (
-            <div className="form-info" style={{ textAlign: "center", marginTop: 10 }}>
+            <div
+              className="form-info"
+              style={{ textAlign: "center", marginTop: 10 }}
+            >
               {info}
             </div>
           )}
 
-          {/* show error only after submit attempt OR on resend failure */}
           {attemptedSubmit && error && (
-            <div className="form-error" style={{ textAlign: "center", marginTop: 10 }}>
+            <div
+              className="form-error"
+              style={{ textAlign: "center", marginTop: 10 }}
+            >
               {error}
             </div>
           )}
@@ -266,13 +273,15 @@ export default function ResetPasswordOtp({ navigate }) {
                 className="link-button"
                 onClick={handleResend}
                 style={{ padding: 0 }}
-                aria-disabled={secondsLeft > 0}
               >
                 Resend
               </button>
             ) : (
               <>
-                Didn't receive code? <span style={{ fontWeight: 600 }}>Resend in {formatTime(secondsLeft)}</span>
+                Didn't receive code?{" "}
+                <span style={{ fontWeight: 600 }}>
+                  Resend in {formatTime(secondsLeft)}
+                </span>
               </>
             )}
           </p>
@@ -291,10 +300,16 @@ export default function ResetPasswordOtp({ navigate }) {
           </button>
 
           <div className="signin-footer">
-            <button className="link-button" onClick={() => navigate("resetEmail")}>
+            <button
+              className="link-button"
+              onClick={() => navigate("resetEmail")}
+            >
               Change Email
             </button>
-            <button className="link-button" onClick={() => navigate("login")}>
+            <button
+              className="link-button"
+              onClick={() => navigate("login")}
+            >
               Back to Login
             </button>
           </div>
