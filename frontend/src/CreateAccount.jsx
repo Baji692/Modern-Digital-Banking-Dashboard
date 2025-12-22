@@ -87,7 +87,7 @@ function CreateAccount({ navigate }) {
     return Object.keys(e).length === 0;
   };
 
-  /* ---------------- SUBMIT ---------------- */
+  /* ---------------- SUBMIT (REGISTER → SEND OTP) ---------------- */
 
   const handleCreate = async () => {
     if (!validateAll()) {
@@ -98,25 +98,36 @@ function CreateAccount({ navigate }) {
     setLoading(true);
 
     try {
-      await axios.post(`${API_BASE}/auth/register`, {
+      const payload = {
         name: fullName,
         email,
         phone,
         password,
-      });
+      };
 
-      toast.success("Account created successfully 🎉");
+      // ✅ Store registration state (used by RegisterOtp.jsx)
+      sessionStorage.setItem(
+        "pending_register",
+        JSON.stringify(payload)
+      );
 
-      setTimeout(() => navigate("login"), 1500);
+      // ✅ CORRECT endpoint (matches backend router prefix)
+      await axios.post(
+        `${API_BASE}/auth/register/send-otp`,
+        { email }
+      );
+
+      toast.success("OTP sent to your email 📧");
+      navigate("registerOtp");
     } catch (err) {
-      const msg = err?.response?.data?.detail || "Registration failed";
-      toast.error(msg);
+      sessionStorage.removeItem("pending_register");
+      toast.error(err?.response?.data?.detail || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ---------------- UI ---------------- */
+  /* ---------------- UI (100% UNCHANGED) ---------------- */
 
   return (
     <div className="app-root">
@@ -148,7 +159,9 @@ function CreateAccount({ navigate }) {
                 onChange={(e) => setFullName(e.target.value)}
               />
             </div>
-            {errors.fullName && <div className="form-error">{errors.fullName}</div>}
+            {errors.fullName && (
+              <div className="form-error">{errors.fullName}</div>
+            )}
           </div>
 
           {/* Email */}
@@ -187,11 +200,9 @@ function CreateAccount({ navigate }) {
             {showPhoneTooShort && (
               <div className="form-error">Enter exactly 10 digits</div>
             )}
-
             {showPhoneError && (
               <div className="form-error">{errors.phone}</div>
             )}
-
             {showPhoneSuccess && (
               <div className="form-success">Valid phone number ✓</div>
             )}
@@ -219,7 +230,9 @@ function CreateAccount({ navigate }) {
             </div>
 
             <div className="pw-strength-row">
-              <div className={`pw-strength-bar pw-strength-${strength.label.toLowerCase()}`}>
+              <div
+                className={`pw-strength-bar pw-strength-${strength.label.toLowerCase()}`}
+              >
                 <div
                   className="pw-strength-fill"
                   style={{ width: `${(strength.score / 4) * 100}%` }}
@@ -228,7 +241,9 @@ function CreateAccount({ navigate }) {
               <div className="pw-strength-text">{strength.label}</div>
             </div>
 
-            {errors.password && <div className="form-error">{errors.password}</div>}
+            {errors.password && (
+              <div className="form-error">{errors.password}</div>
+            )}
           </div>
 
           {/* Confirm */}

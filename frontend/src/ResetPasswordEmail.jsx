@@ -1,3 +1,4 @@
+// ResetPasswordEmail.jsx
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -14,6 +15,7 @@ function ResetPasswordEmail({ navigate }) {
 
   const handleSendOtp = async () => {
     setError("");
+
     if (!email.trim()) {
       setError("Please enter your email.");
       return;
@@ -23,8 +25,14 @@ function ResetPasswordEmail({ navigate }) {
     try {
       await axios.post(`${API_BASE}/auth/forgot-password`, { email });
 
+      // ✅ CRITICAL FIX
+      sessionStorage.setItem("reset_email", email);
+
       toast.success("OTP sent to your email 📧");
-      setTimeout(() => navigate("resetOtp"), 1200);
+
+      setTimeout(() => {
+        navigate("resetOtp");
+      }, 1200);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Failed to send OTP");
     } finally {
@@ -70,11 +78,7 @@ function ResetPasswordEmail({ navigate }) {
             {loading ? "Sending..." : "Send OTP"}
           </button>
 
-          {/* ✅ ONLY CHANGE: center Back to Login */}
-          <div
-            className="signin-footer"
-            style={{ justifyContent: "center" }}
-          >
+          <div className="signin-footer" style={{ justifyContent: "center" }}>
             <button className="link-button" onClick={() => navigate("login")}>
               Back to Login
             </button>

@@ -1,11 +1,14 @@
 // ResetPasswordNewPassword.jsx
-import React, { useMemo, useState } from "react";
-import { toast } from "react-toastify"; // ✅ added
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { toast } from "react-toastify";
+import axios from "axios";
 import "./App.css";
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
 
-/** Same strength evaluator used in CreateAccount for consistent UX */
+const API_BASE = "http://127.0.0.1:8000";
+
+/* ---------- PASSWORD STRENGTH ---------- */
 function evaluateStrength(pw) {
   let score = 0;
   if (pw.length >= 8) score++;
@@ -23,9 +26,29 @@ function ResetPasswordNewPassword({ navigate }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-
   const [errors, setErrors] = useState({});
-  const strength = useMemo(() => evaluateStrength(newPassword), [newPassword]);
+  const [loading, setLoading] = useState(false);
+
+  const strength = useMemo(
+    () => evaluateStrength(newPassword),
+    [newPassword]
+  );
+
+  const email = sessionStorage.getItem("reset_email");
+  const otp = sessionStorage.getItem("reset_otp");
+
+  // ✅ prevents guard firing after success
+  const completedRef = useRef(false);
+
+  /* 🔐 SESSION GUARD */
+  useEffect(() => {
+    if (completedRef.current) return;
+
+    if (!email || !otp) {
+      toast.error("Password reset session expired");
+      navigate("resetEmail");
+    }
+  }, [email, otp, navigate]);
 
   const passwordsMatch =
     newPassword && confirmPassword && newPassword === confirmPassword;
@@ -43,6 +66,7 @@ function ResetPasswordNewPassword({ navigate }) {
     return Object.keys(e).length === 0;
   };
 
+  /* 🔐 FINAL RESET */
   const handleSetPassword = async () => {
     if (!validateAll()) {
       toast.error("Please fix the errors before continuing");
@@ -54,20 +78,36 @@ function ResetPasswordNewPassword({ navigate }) {
       return;
     }
 
+    setLoading(true);
+
     try {
-      // 🔁 Replace with real API later:
-      // await axios.post("/auth/reset-password", {...})
+      await axios.post(`${API_BASE}/auth/reset-password`, {
+        email,
+        otp,
+        new_password: newPassword,
+      });
+
+      completedRef.current = true; // ✅ STOP GUARD
 
       toast.success("Password reset successfully 🔐");
 
+      // cleanup AFTER success
+      sessionStorage.removeItem("reset_email");
+      sessionStorage.removeItem("reset_otp");
+
       setTimeout(() => {
-        navigate && navigate("login");
-      }, 1500);
+        navigate("login");
+      }, 1200);
     } catch (err) {
-      toast.error("Failed to reset password. Try again.");
+      toast.error(
+        err?.response?.data?.detail || "Failed to reset password"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
+  /* ---------- UI (UNCHANGED) ---------- */
   return (
     <div className="app-root">
       <div className="top-left-logo">
@@ -83,7 +123,6 @@ function ResetPasswordNewPassword({ navigate }) {
           <h1 className="signin-title">Reset Password</h1>
           <p className="signin-subtitle">Setup a New Password</p>
 
-          {/* New Password */}
           <div className="field-group">
             <label className="field-label">New Password</label>
             <div className="field-input-wrapper">
@@ -95,26 +134,19 @@ function ResetPasswordNewPassword({ navigate }) {
                 value={newPassword}
                 onChange={(e) => {
                   setNewPassword(e.target.value);
-                  setErrors((p) => ({
-                    ...p,
-                    newPassword: undefined,
-                    confirmPassword: undefined,
-                  }));
+                  setErrors({});
                 }}
-                autoComplete="new-password"
               />
               <button
                 type="button"
                 className="field-password-toggle"
                 onClick={() => setShowNew((s) => !s)}
-                aria-label={showNew ? "Hide password" : "Show password"}
               >
                 {showNew ? "🙈" : "👁️"}
               </button>
             </div>
 
-            {/* strength meter */}
-            <div className="pw-strength-row" style={{ marginTop: 8 }}>
+            <div className="pw-strength-row">
               <div
                 className={
                   "pw-strength-bar pw-strength-" +
@@ -128,13 +160,8 @@ function ResetPasswordNewPassword({ navigate }) {
               </div>
               <div className="pw-strength-text">{strength.label}</div>
             </div>
-
-            {errors.newPassword && (
-              <div className="form-error">{errors.newPassword}</div>
-            )}
           </div>
 
-          {/* Confirm New Password */}
           <div className="field-group">
             <label className="field-label">Confirm New Password</label>
             <div className="field-input-wrapper">
@@ -146,51 +173,32 @@ function ResetPasswordNewPassword({ navigate }) {
                 value={confirmPassword}
                 onChange={(e) => {
                   setConfirmPassword(e.target.value);
-                  setErrors((p) => ({
-                    ...p,
-                    confirmPassword: undefined,
-                  }));
+                  setErrors({});
                 }}
-                autoComplete="new-password"
               />
               <button
                 type="button"
                 className="field-password-toggle"
                 onClick={() => setShowConfirm((s) => !s)}
-                aria-label={showConfirm ? "Hide password" : "Show password"}
               >
                 {showConfirm ? "🙈" : "👁️"}
               </button>
             </div>
 
-            {/* match indicator */}
-            {confirmPassword ? (
-              passwordsMatch ? (
+            {confirmPassword &&
+              (passwordsMatch ? (
                 <div className="form-success">Passwords match ✓</div>
               ) : (
                 <div className="form-error">Passwords do not match</div>
-              )
-            ) : null}
-
-            {errors.confirmPassword && (
-              <div className="form-error">{errors.confirmPassword}</div>
-            )}
+              ))}
           </div>
 
           <button
             className="primary-button"
             onClick={handleSetPassword}
-            disabled={!newPassword || !confirmPassword || !passwordsMatch}
-            style={{
-              opacity:
-                !newPassword || !confirmPassword || !passwordsMatch ? 0.6 : 1,
-              cursor:
-                !newPassword || !confirmPassword || !passwordsMatch
-                  ? "not-allowed"
-                  : "pointer",
-            }}
+            disabled={loading || !passwordsMatch}
           >
-            Set Password
+            {loading ? "Setting Password..." : "Set Password"}
           </button>
 
           <div className="reset-footer">

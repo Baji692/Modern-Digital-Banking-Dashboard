@@ -1,16 +1,19 @@
-// ResetPasswordOtp.jsx
+// RegisterOtp.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import axios from "axios";
 import "./App.css";
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
 
+const API_BASE = "http://127.0.0.1:8000";
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
-export default function ResetPasswordOtp({ navigate }) {
+export default function RegisterOtp({ navigate }) {
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const inputsRef = useRef([]);
+
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
@@ -18,27 +21,30 @@ export default function ResetPasswordOtp({ navigate }) {
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const timerRef = useRef(null);
 
-  const email = sessionStorage.getItem("reset_email");
+  /* ================= LOAD REGISTRATION DATA ================= */
+  const pending = JSON.parse(
+    sessionStorage.getItem("pending_register")
+  );
 
-  /* ================= SESSION GUARD ================= */
   useEffect(() => {
-    if (!email) {
-      toast.error("Password reset session expired");
-      navigate("resetEmail");
+    if (!pending?.email) {
+      toast.error("Registration session expired");
+      navigate("create");
+      return;
     }
-  }, [email, navigate]);
 
-  /* ================= INITIAL FOCUS + TIMER ================= */
-  useEffect(() => {
     inputsRef.current[0]?.focus();
     startTimer();
+
     return () => stopTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ================= TIMER ================= */
   const startTimer = () => {
     stopTimer();
     setSecondsLeft(RESEND_SECONDS);
+
     timerRef.current = setInterval(() => {
       setSecondsLeft((s) => {
         if (s <= 1) {
@@ -90,12 +96,6 @@ export default function ResetPasswordOtp({ navigate }) {
   };
 
   const handleInputKeyDown = (e, idx) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSubmit();
-      return;
-    }
-
     if (e.key === "Backspace") {
       if (otp[idx]) updateOtpAt(idx, "");
       else if (idx > 0) {
@@ -103,11 +103,16 @@ export default function ResetPasswordOtp({ navigate }) {
         inputsRef.current[idx - 1]?.focus();
       }
     }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   const onPaste = (e) => {
     e.preventDefault();
-    const digits = (e.clipboardData || window.clipboardData)
+    const digits = e.clipboardData
       .getData("text")
       .replace(/\D/g, "")
       .slice(0, OTP_LENGTH)
@@ -128,23 +133,59 @@ export default function ResetPasswordOtp({ navigate }) {
 
   const isComplete = otp.every((d) => d !== "");
 
-  /* ================= SUBMIT (FIXED) ================= */
-  const handleSubmit = () => {
+  /* ================= VERIFY OTP ================= */
+  const handleSubmit = async () => {
     setAttemptedSubmit(true);
     setError("");
     setInfo("");
 
     if (!isComplete) {
       toast.error("Please enter the full 6-digit OTP");
-      setError("Please enter the full 6-digit code.");
       return;
     }
 
-    // ✅ STORE OTP (NO BACKEND CALL HERE)
-    sessionStorage.setItem("reset_otp", otp.join(""));
+    try {
+      const code = otp.join("");
 
-    toast.success("OTP verified successfully ✅");
-    navigate("resetNewPassword");
+      await axios.post(
+        `${API_BASE}/auth/register/verify-otp`,
+        {
+          name: pending.name,
+          email: pending.email,
+          phone: pending.phone,
+          password: pending.password,
+          otp: code,
+        }
+      );
+
+      sessionStorage.removeItem("pending_register");
+
+      toast.success("Account created successfully 🎉");
+      navigate("login");
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.detail || "Invalid or expired OTP"
+      );
+    }
+  };
+
+  /* ================= RESEND OTP ================= */
+  const handleResend = async () => {
+    if (secondsLeft > 0) return;
+
+    try {
+      await axios.post(
+        `${API_BASE}/auth/register/send-otp`,
+        { email: pending.email }
+      );
+
+      toast.success("OTP sent to your email 📧");
+      setOtp(Array(OTP_LENGTH).fill(""));
+      inputsRef.current[0]?.focus();
+      startTimer();
+    } catch {
+      toast.error("Failed to resend OTP");
+    }
   };
 
   /* ================= UI (100% UNCHANGED) ================= */
@@ -160,7 +201,7 @@ export default function ResetPasswordOtp({ navigate }) {
             <img src={bankIcon} alt="Bank Icon" className="signin-logo-icon" />
           </div>
 
-          <h1 className="signin-title">Reset Password</h1>
+          <h1 className="signin-title">Create Account</h1>
           <p className="signin-subtitle">
             Enter the OTP received through your email address
           </p>
@@ -190,7 +231,7 @@ export default function ResetPasswordOtp({ navigate }) {
 
           <p className="otp-helper" style={{ textAlign: "center" }}>
             {!secondsLeft ? (
-              <button className="link-button">
+              <button className="link-button" onClick={handleResend}>
                 Resend
               </button>
             ) : (
@@ -207,16 +248,10 @@ export default function ResetPasswordOtp({ navigate }) {
           </button>
 
           <div className="signin-footer">
-            <button
-              className="link-button"
-              onClick={() => navigate("resetEmail")}
-            >
+            <button className="link-button" onClick={() => navigate("create")}>
               Change Email
             </button>
-            <button
-              className="link-button"
-              onClick={() => navigate("login")}
-            >
+            <button className="link-button" onClick={() => navigate("login")}>
               Back to Login
             </button>
           </div>

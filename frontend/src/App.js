@@ -2,13 +2,14 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
-import { ToastContainer, toast } from "react-toastify"; // 🟢 toast
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
 
 // Screens
+import RegisterOtp from "./RegisterOtp";
 import CreateAccount from "./CreateAccount";
 import ResetPasswordEmail from "./ResetPasswordEmail";
 import ResetPasswordOtp from "./ResetPasswordOtp";
@@ -66,7 +67,6 @@ function LoginPage({ onLogin, navigate }) {
 
       if (!res.ok) {
         toast.error(data.detail || "Invalid email or password ❌");
-        setLoading(false);
         return;
       }
 
@@ -77,14 +77,12 @@ function LoginPage({ onLogin, navigate }) {
         kyc_status: data.kyc_status,
       };
 
-      // ✅ persist session
       localStorage.setItem("finbank_user", JSON.stringify(userData));
-
-      toast.success(`Welcome back, ${data.name}! 🎉`); // 🟢 toast
+      toast.success(`Welcome back, ${data.name}! 🎉`);
 
       onLogin(userData);
-    } catch (err) {
-      toast.error("Server not reachable 🚫"); // 🟢 toast
+    } catch {
+      toast.error("Server not reachable 🚫");
     } finally {
       setLoading(false);
     }
@@ -92,12 +90,10 @@ function LoginPage({ onLogin, navigate }) {
 
   return (
     <div className="app-root">
-      {/* TOP LEFT LOGO */}
       <div className="top-left-logo">
         <img src={finBankLogo} alt="FinBank Logo" className="top-logo-img" />
       </div>
 
-      {/* LOGIN CARD */}
       <div className="auth-card-single">
         <section className="signin-pane">
           <div className="signin-logo-circle">
@@ -107,9 +103,6 @@ function LoginPage({ onLogin, navigate }) {
           <h1 className="signin-title">Welcome Back</h1>
           <p className="signin-subtitle">Sign in to your Banking Dashboard</p>
 
-          
-
-          {/* EMAIL */}
           <div className="field-group">
             <label className="field-label">Email Address</label>
             <div className="field-input-wrapper">
@@ -125,7 +118,6 @@ function LoginPage({ onLogin, navigate }) {
             {emailError && <div className="form-error">{emailError}</div>}
           </div>
 
-          {/* PASSWORD */}
           <div className="field-group">
             <label className="field-label">Password</label>
             <div className="field-input-wrapper">
@@ -148,7 +140,6 @@ function LoginPage({ onLogin, navigate }) {
             {passwordError && <div className="form-error">{passwordError}</div>}
           </div>
 
-          {/* REMEMBER + FORGOT */}
           <div className="signin-options-row">
             <label className="remember-me">
               <input type="checkbox" />
@@ -191,7 +182,7 @@ function App() {
 
   const navigate = (s) => setScreen(s);
 
-  // ✅ restore session
+  /* 🔐 Auto-login if already authenticated */
   useEffect(() => {
     const saved = localStorage.getItem("finbank_user");
     if (saved) {
@@ -200,6 +191,17 @@ function App() {
     }
   }, []);
 
+  /* ✅ PASSWORD RESET SESSION GUARD (FIXES YOUR BUG) */
+  useEffect(() => {
+    if (screen === "resetOtp" || screen === "resetNewPassword") {
+      const resetEmail = sessionStorage.getItem("reset_email");
+      if (!resetEmail) {
+        toast.error("Password reset session expired");
+        setScreen("resetEmail");
+      }
+    }
+  }, [screen]);
+
   const handleLogin = (userData) => {
     setUser(userData);
     setScreen("dashboard");
@@ -207,13 +209,14 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("finbank_user");
+    sessionStorage.removeItem("pending_register");
+    sessionStorage.removeItem("reset_email");
     setUser(null);
     setScreen("login");
   };
 
   return (
     <>
-      {/* 🟢 Toast container (ONLY ONCE) */}
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
       {(() => {
@@ -222,6 +225,8 @@ function App() {
             return <LoginPage onLogin={handleLogin} navigate={navigate} />;
           case "create":
             return <CreateAccount navigate={navigate} />;
+          case "registerOtp":
+            return <RegisterOtp navigate={navigate} />;
           case "resetEmail":
             return <ResetPasswordEmail navigate={navigate} />;
           case "resetOtp":
