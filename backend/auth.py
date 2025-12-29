@@ -3,6 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
+from jose import jwt, JWTError
+from fastapi.security import OAuth2PasswordBearer
+
+import os
+
+
 from database import SessionLocal
 from models import User, EmailOTP
 from schemas import (
@@ -21,7 +27,27 @@ from security import (
 )
 from email_service import send_email
 
+
 router = APIRouter(tags=["Auth"])
+
+
+# ---------------- JWT CONFIG ----------------
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
+
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY is not set in .env")
+
+
+
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
 
 # ---------------- DB ----------------
@@ -117,12 +143,25 @@ def login(user: LoginUser, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    # 🔐 Create JWT
+    access_token = create_access_token(
+        data={
+            "user_id": db_user.id,
+            "email": db_user.email
+        }
+    )
+
     return {
-        "user_id": db_user.id,
-        "name": db_user.name,
-        "email": db_user.email,
-        "kyc_status": db_user.kyc_status,
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": db_user.id,
+            "name": db_user.name,
+            "email": db_user.email,
+            "kyc_status": db_user.kyc_status,
+        },
     }
+
 
 
 # =====================================================
@@ -208,3 +247,5 @@ def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Password reset successful"}
+
+

@@ -1,4 +1,3 @@
-// App.js
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
@@ -8,13 +7,21 @@ import "react-toastify/dist/ReactToastify.css";
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
 
-// Screens
+/* ================= AUTH SCREENS ================= */
 import RegisterOtp from "./RegisterOtp";
 import CreateAccount from "./CreateAccount";
 import ResetPasswordEmail from "./ResetPasswordEmail";
 import ResetPasswordOtp from "./ResetPasswordOtp";
 import ResetPasswordNewPassword from "./ResetPasswordNewPassword";
-import Dashboard from "./Dashboard";
+
+/* ================= DASHBOARD ================= */
+import DashboardLayout from "./layout/DashboardLayout";
+import HomeDashboard from "./pages/HomeDashboard";
+import Accounts from "./pages/Accounts";
+import Budgets from "./pages/Budgets";
+import Bills from "./pages/Bills";
+import Rewards from "./pages/Rewards";
+import Insights from "./pages/Insights";
 
 /* ---------------- EMAIL VALIDATION ---------------- */
 function isValidEmail(email) {
@@ -22,7 +29,7 @@ function isValidEmail(email) {
 }
 
 /* ============================================================
-   LOGIN PAGE (UI PRESERVED 100%)
+   LOGIN PAGE (UI 100% UNCHANGED)
    ============================================================ */
 function LoginPage({ onLogin, navigate }) {
   const [email, setEmail] = useState("");
@@ -66,20 +73,22 @@ function LoginPage({ onLogin, navigate }) {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.detail || "Invalid email or password ❌");
+        toast.error(data?.detail || "Invalid email or password ❌");
         return;
       }
 
       const userData = {
-        id: data.user_id,
-        name: data.name,
-        email: data.email,
-        kyc_status: data.kyc_status,
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        kyc_status: data.user.kyc_status,
       };
 
+      /* ✅ SINGLE SOURCE OF TRUTH (FIXED) */
       localStorage.setItem("finbank_user", JSON.stringify(userData));
-      toast.success(`Welcome back, ${data.name}! 🎉`);
+      localStorage.setItem("finbank_token", data.access_token);
 
+      toast.success(`Welcome back, ${data.user.name}! 🎉`);
       onLogin(userData);
     } catch {
       toast.error("Server not reachable 🚫");
@@ -174,24 +183,34 @@ function LoginPage({ onLogin, navigate }) {
 }
 
 /* ============================================================
-   MAIN APP
+   MAIN APP (AUTH LOGIC FIXED, UI UNCHANGED)
    ============================================================ */
 function App() {
   const [screen, setScreen] = useState("login");
   const [user, setUser] = useState(null);
+  const [dashScreen, setDashScreen] = useState("home");
 
   const navigate = (s) => setScreen(s);
 
-  /* 🔐 Auto-login if already authenticated */
+  /* 🔐 AUTO LOGIN (FIXED TOKEN KEY) */
   useEffect(() => {
-    const saved = localStorage.getItem("finbank_user");
-    if (saved) {
-      setUser(JSON.parse(saved));
+    const savedUser = localStorage.getItem("finbank_user");
+    const token = localStorage.getItem("finbank_token");
+
+    if (savedUser && token) {
+      setUser(JSON.parse(savedUser));
       setScreen("dashboard");
     }
   }, []);
 
-  /* ✅ PASSWORD RESET SESSION GUARD (FIXES YOUR BUG) */
+  /* 🔄 DASHBOARD NAV */
+  useEffect(() => {
+    const handler = (e) => setDashScreen(e.detail);
+    window.addEventListener("dashboard:navigate", handler);
+    return () => window.removeEventListener("dashboard:navigate", handler);
+  }, []);
+
+  /* 🔒 RESET FLOW GUARD */
   useEffect(() => {
     if (screen === "resetOtp" || screen === "resetNewPassword") {
       const resetEmail = sessionStorage.getItem("reset_email");
@@ -204,13 +223,14 @@ function App() {
 
   const handleLogin = (userData) => {
     setUser(userData);
+    setDashScreen("home");
     setScreen("dashboard");
   };
 
   const handleLogout = () => {
     localStorage.removeItem("finbank_user");
-    sessionStorage.removeItem("pending_register");
-    sessionStorage.removeItem("reset_email");
+    localStorage.removeItem("finbank_token");
+    sessionStorage.clear();
     setUser(null);
     setScreen("login");
   };
@@ -219,32 +239,27 @@ function App() {
     <>
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
-      {(() => {
-        switch (screen) {
-          case "login":
-            return <LoginPage onLogin={handleLogin} navigate={navigate} />;
-          case "create":
-            return <CreateAccount navigate={navigate} />;
-          case "registerOtp":
-            return <RegisterOtp navigate={navigate} />;
-          case "resetEmail":
-            return <ResetPasswordEmail navigate={navigate} />;
-          case "resetOtp":
-            return <ResetPasswordOtp navigate={navigate} />;
-          case "resetNewPassword":
-            return <ResetPasswordNewPassword navigate={navigate} />;
-          case "dashboard":
-            return (
-              <Dashboard
-                navigate={navigate}
-                user={user}
-                logout={handleLogout}
-              />
-            );
-          default:
-            return <LoginPage onLogin={handleLogin} navigate={navigate} />;
-        }
-      })()}
+      {screen === "login" && (
+        <LoginPage onLogin={handleLogin} navigate={navigate} />
+      )}
+      {screen === "create" && <CreateAccount navigate={navigate} />}
+      {screen === "registerOtp" && <RegisterOtp navigate={navigate} />}
+      {screen === "resetEmail" && <ResetPasswordEmail navigate={navigate} />}
+      {screen === "resetOtp" && <ResetPasswordOtp navigate={navigate} />}
+      {screen === "resetNewPassword" && (
+        <ResetPasswordNewPassword navigate={navigate} />
+      )}
+
+      {screen === "dashboard" && (
+        <DashboardLayout user={user} logout={handleLogout}>
+          {dashScreen === "home" && <HomeDashboard user={user} />}
+          {dashScreen === "accounts" && <Accounts />}
+          {dashScreen === "budgets" && <Budgets />}
+          {dashScreen === "bills" && <Bills />}
+          {dashScreen === "rewards" && <Rewards />}
+          {dashScreen === "insights" && <Insights />}
+        </DashboardLayout>
+      )}
     </>
   );
 }

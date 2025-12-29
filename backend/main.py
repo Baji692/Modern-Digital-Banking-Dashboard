@@ -3,15 +3,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from auth import router as auth_router
-
-# Load environment variables
+# Load env variables
 load_dotenv()
+
+# IMPORTANT: import models so SQLAlchemy registers tables
+import models
+
+# Routers
+from auth import router as auth_router
+from routes import accounts, transactions, bills
 
 # -------------------------------------------------
 # CREATE FASTAPI APP (ONLY ONCE)
 # -------------------------------------------------
-app = FastAPI()
+app = FastAPI(
+    title="FinBank API",
+    version="0.1.0"
+)
 
 # -------------------------------------------------
 # CORS CONFIGURATION (FOR REACT FRONTEND)
@@ -30,14 +38,13 @@ app.add_middleware(
 # -------------------------------------------------
 # ROUTERS
 # -------------------------------------------------
-app.include_router(
-    auth_router,
-    prefix="/auth",
-    tags=["Auth"]
-)
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+app.include_router(accounts.router)
+app.include_router(transactions.router)
+app.include_router(bills.router)
 
 # -------------------------------------------------
-# ROOT CHECK (OPTIONAL BUT SAFE)
+# ROOT CHECK
 # -------------------------------------------------
 @app.get("/")
 def root():

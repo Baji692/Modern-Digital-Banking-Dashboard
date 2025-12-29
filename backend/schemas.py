@@ -51,3 +51,48 @@ class ResetPassword(BaseModel):
     email: EmailStr
     otp: str = Field(..., min_length=6, max_length=6)
     new_password: str = Field(..., min_length=8)
+
+
+# schemas.py
+from pydantic import BaseModel
+from datetime import date
+from typing import Optional
+
+# ================= ACCOUNTS =================
+
+class AccountCreate(BaseModel):
+    bank_name: str
+    account_type: str
+    masked_account: str
+    currency: str = "INR"
+    balance: float = 0.0
+    is_primary: bool = False
+
+
+
+
+class AccountUpdate(BaseModel):
+    bank_name: Optional[str] = None
+    account_type: Optional[str] = None
+    masked_account: Optional[str] = None
+    balance: Optional[float] = None
+    currency: Optional[str] = None
+    is_primary: Optional[bool] = None
+
+
+
+# ================= BILLS =================
+
+class BillCreate(BaseModel):
+    biller_name: str
+    due_date: date
+    amount_due: float
+    auto_pay: bool = False
+
+
+class BillUpdate(BaseModel):
+    biller_name: Optional[str]
+    due_date: Optional[date]
+    amount_due: Optional[float]
+    status: Optional[str]
+    auto_pay: Optional[bool]
