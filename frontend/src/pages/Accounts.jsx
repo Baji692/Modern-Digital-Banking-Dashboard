@@ -7,6 +7,9 @@ export default function Accounts() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -25,19 +28,33 @@ export default function Accounts() {
     is_primary: false,
   });
 
+  /* ================= LOAD DATA ================= */
+
   const loadAccounts = async () => {
     setLoading(true);
     try {
       const data = await apiFetch("get", "/accounts/");
-      setAccounts(data);
+      setAccounts(data || []);
     } finally {
       setLoading(false);
     }
   };
 
+  const loadRecentTransactions = async () => {
+    try {
+      const data = await apiFetch("get", "/transactions/recent");
+      setRecentTransactions(data || []);
+    } catch {
+      setRecentTransactions([]);
+    }
+  };
+
   useEffect(() => {
     loadAccounts();
+    loadRecentTransactions();
   }, []);
+
+  /* ================= ACCOUNT CRUD ================= */
 
   const openCreate = () => {
     setEditing(null);
@@ -76,17 +93,14 @@ export default function Accounts() {
       user_id: user.id,
       bank_name: form.bank_name.trim(),
       account_type: form.account_type,
-
       masked_account:
         form.masked_account.trim() !== ""
           ? form.masked_account.trim()
           : editing?.masked_account,
-
       balance:
         form.balance !== "" && !isNaN(form.balance)
           ? parseFloat(form.balance)
           : editing?.balance,
-
       currency: editing?.currency || "INR",
       is_primary: form.is_primary,
     };
@@ -128,11 +142,19 @@ export default function Accounts() {
     return value.replace(/.(?=.{4})/g, "*");
   };
 
+  /* ================= FILTERED TRANSACTIONS ================= */
+
+  const displayedTransactions = selectedAccount
+    ? recentTransactions.filter(
+        (t) => t.bank_name === selectedAccount.bank_name
+      )
+    : recentTransactions;
+
   if (loading) return <p>Loading accounts...</p>;
 
   return (
     <>
-      {/* ===== PAGE HEADER (MODIFIED PART ONLY) ===== */}
+      {/* ===== HEADER ===== */}
       <div className="page-header">
         <h1>Accounts</h1>
         <button className="action-btn" onClick={openCreate}>
@@ -140,10 +162,20 @@ export default function Accounts() {
         </button>
       </div>
 
-      {/* ===== REST UNCHANGED ===== */}
-      <div className="cards-grid">
+      {/* ===== ACCOUNT CARDS (3 PER ROW) ===== */}
+      <div className="cards-grid three-col">
         {accounts.map((a) => (
-          <div key={a.id} className="glass-card">
+          <div
+            key={a.id}
+            className={`glass-card ${
+              selectedAccount?.id === a.id ? "active-card" : ""
+            }`}
+            onClick={() =>
+              setSelectedAccount(
+                selectedAccount?.id === a.id ? null : a
+              )
+            }
+          >
             <h3>{a.bank_name}</h3>
             <p>{a.account_type}</p>
 
@@ -153,11 +185,12 @@ export default function Accounts() {
                 : maskAccountNumber(a.masked_account)}
               <button
                 className="eye-btn"
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation();
                   setVisibleAccountId(
                     visibleAccountId === a.id ? null : a.id
-                  )
-                }
+                  );
+                }}
               >
                 {visibleAccountId === a.id ? "🙈" : "👁️"}
               </button>
@@ -168,14 +201,20 @@ export default function Accounts() {
             <div className="card-actions">
               <button
                 className="action-btn edit-btn"
-                onClick={() => openEdit(a)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEdit(a);
+                }}
               >
                 Edit
               </button>
 
               <button
                 className="action-btn delete-btn"
-                onClick={() => confirmDelete(a)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  confirmDelete(a);
+                }}
               >
                 Delete
               </button>
@@ -184,6 +223,59 @@ export default function Accounts() {
         ))}
       </div>
 
+      {/* ===== RECENT TRANSACTIONS TABLE ===== */}
+      <section style={{ marginTop: "30px" }}>
+        <h3 className="section-title">
+          Recent Transactions{" "}
+          {selectedAccount && `(${selectedAccount.bank_name})`}
+        </h3>
+
+        <div className="glass-card">
+          <table className="txn-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Merchant</th>
+                <th>Amount</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {displayedTransactions.slice(0, 5).map((t) => (
+                <tr key={t.id}>
+                  <td>
+                    {new Date(t.txn_date).toLocaleDateString()}
+                  </td>
+                  <td>{t.description}</td>
+                  <td>{t.merchant || "-"}</td>
+                  <td
+                    className={
+                      t.txn_type === "credit"
+                        ? "amount credit"
+                        : "amount debit"
+                    }
+                  >
+                    ₹ {t.amount}
+                  </td>
+                  <td>{t.txn_type}</td>
+                </tr>
+              ))}
+
+              {displayedTransactions.length === 0 && (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: "center" }}>
+                    No transactions found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ===== MODALS (UNCHANGED) ===== */}
       {showModal && (
         <Modal
           title={editing ? "Edit Account" : "Create Account"}

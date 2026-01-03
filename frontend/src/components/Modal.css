@@ -1,28 +1,35 @@
+/* ================= MODAL BACKDROP ================= */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 999;
 }
 
+/* ================= MODAL CARD (DEFAULT) ================= */
 .modal-card {
-  width: 420px;
-  max-width: 90%;
+  width: 100%;
+  max-width: 520px; /* default width for normal modals */
+  border-radius: 18px;
+  padding: 18px;
 }
 
+/* ================= MODAL HEADER ================= */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 10px;
 }
 
+/* ================= MODAL BODY ================= */
 .modal-body {
   margin-top: 1rem;
 }
-
 
 .modal-body input,
 .modal-body select {
@@ -33,4 +40,39 @@
   margin-bottom: 12px;
   background: rgba(255, 255, 255, 0.12);
   color: white;
+}
+
+/* ================= CSV IMPORT MODAL (WIDE & RESPONSIVE) ================= */
+.csv-modal {
+  width: 90vw;          /* 🔑 makes it actually wide */
+  max-width: 1100px;   /* professional banking modal width */
+}
+
+/* Keep CSV modal content scrollable, not entire page */
+.csv-modal .modal-body {
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+/* ================= CSV PREVIEW CARD ================= */
+.csv-preview-card {
+  max-height: 340px;   /* was ~260px */
+  overflow: hidden;
+}
+
+/* Wrapper for horizontal + vertical scroll */
+.csv-preview-card .csv-table-wrapper {
+  max-height: 300px;   /* was ~220px */
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* Sticky table headers */
+.csv-preview-card table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  font-weight: 600;
 }

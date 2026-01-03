@@ -4,10 +4,9 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
 from jose import jwt, JWTError
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 import os
-
 
 from database import SessionLocal
 from models import User, EmailOTP
@@ -31,21 +30,28 @@ from email_service import send_email
 router = APIRouter(tags=["Auth"])
 
 
-# ---------------- JWT CONFIG ----------------
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+# ---------------- JWT CONFIG (SAFE) ----------------
+
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
 
-if not SECRET_KEY:
-    raise RuntimeError("JWT_SECRET_KEY is not set in .env")
 
+def get_jwt_settings():
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    algorithm = os.getenv("JWT_ALGORITHM", "HS256")
 
+    if not secret_key:
+        raise RuntimeError("JWT_SECRET_KEY is not set in .env")
+
+    return secret_key, algorithm
 
 
 def create_access_token(data: dict):
+    SECRET_KEY, ALGORITHM = get_jwt_settings()
+
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
+
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -143,11 +149,10 @@ def login(user: LoginUser, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # 🔐 Create JWT
     access_token = create_access_token(
         data={
             "user_id": db_user.id,
-            "email": db_user.email
+            "email": db_user.email,
         }
     )
 
@@ -161,7 +166,6 @@ def login(user: LoginUser, db: Session = Depends(get_db)):
             "kyc_status": db_user.kyc_status,
         },
     }
-
 
 
 # =====================================================
@@ -197,15 +201,11 @@ def forgot_password(data: ForgotPassword, db: Session = Depends(get_db)):
 
 
 # =====================================================
-# RESET PASSWORD (FIXED & HARDENED)
-# =====================================================
-# =====================================================
-# RESET PASSWORD (FINAL – FIXED)
+# RESET PASSWORD (FINAL – HARDENED)
 # =====================================================
 @router.post("/reset-password")
 def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
 
-    # 1️⃣ Find latest unused OTP
     otp_row = (
         db.query(EmailOTP)
         .filter(
@@ -220,27 +220,22 @@ def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
     if not otp_row:
         raise HTTPException(status_code=400, detail="OTP not found")
 
-    # 2️⃣ Check expiry
     if otp_row.expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="OTP expired")
 
-    # 3️⃣ Verify OTP
     if not verify_otp(data.otp, otp_row.otp_hash):
         raise HTTPException(status_code=400, detail="Invalid OTP")
 
-    # 4️⃣ Fetch user
     user = db.query(User).filter(User.email == data.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 5️⃣ Prevent password reuse
     if verify_password(data.new_password, user.password):
         raise HTTPException(
             status_code=400,
             detail="New password must be different from old password",
         )
 
-    # 6️⃣ Commit changes
     otp_row.is_used = True
     user.password = hash_password(data.new_password)
 
@@ -249,3 +244,41 @@ def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
     return {"message": "Password reset successful"}
 
 
+# =====================================================
+# JWT AUTH DEPENDENCY (USED BY ROUTES)
+# =====================================================
+
+security = HTTPBearer()
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    token = credentials.credentials
+
+    try:
+        SECRET_KEY, ALGORITHM = get_jwt_settings()
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        user_id: int | None = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication token",
+            )
+
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token",
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="User not found",
+        )
+
+    return user

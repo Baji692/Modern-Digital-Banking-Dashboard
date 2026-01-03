@@ -117,3 +117,26 @@ class Bills(Base):
 
     auto_pay = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ================= BUDGETS =================
+
+# ================= BUDGETS =================
+
+# ================= BUDGETS =================
+
+class Budgets(Base):
+    __tablename__ = "budgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+
+    category = Column(String(50), nullable=False)
+
+    limit_amount = Column(Numeric(14, 2), nullable=False)
+    spent_amount = Column(Numeric(14, 2), default=0.00)
+
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)

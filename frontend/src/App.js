@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
+import Transactions from "./pages/Transactions";
 
 /* ================= AUTH SCREENS ================= */
 import RegisterOtp from "./RegisterOtp";
@@ -256,10 +257,12 @@ function App() {
           {dashScreen === "accounts" && <Accounts />}
           {dashScreen === "budgets" && <Budgets />}
           {dashScreen === "bills" && <Bills />}
+          {dashScreen === "transactions" && <Transactions />}
           {dashScreen === "rewards" && <Rewards />}
           {dashScreen === "insights" && <Insights />}
         </DashboardLayout>
       )}
+
     </>
   );
 }

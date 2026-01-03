@@ -13,10 +13,9 @@ export default function Sidebar({ logout }) {
     );
   };
 
-
-// export default function Sidebar({ logout }) {
-//   const go = (screen) =>
-//     window.dispatchEvent(new CustomEvent("dashboard:navigate", { detail: screen }));
+  // export default function Sidebar({ logout }) {
+  //   const go = (screen) =>
+  //     window.dispatchEvent(new CustomEvent("dashboard:navigate", { detail: screen }));
 
   return (
     <aside className="dash-sidebar glass">
@@ -24,49 +23,55 @@ export default function Sidebar({ logout }) {
         <img src={finBankLogo} alt="FinBank" className="dash-logo" />
 
         <nav className="dash-nav">
-  <button
-    className={active === "home" ? "nav-active" : ""}
-    onClick={() => go("home")}
-  >
-    🏠 Home
-  </button>
+          <button
+            className={active === "home" ? "nav-active" : ""}
+            onClick={() => go("home")}
+          >
+            🏠 Home
+          </button>
 
-  <button
-    className={active === "accounts" ? "nav-active" : ""}
-    onClick={() => go("accounts")}
-  >
-    💼 Accounts
-  </button>
+          <button
+            className={active === "accounts" ? "nav-active" : ""}
+            onClick={() => go("accounts")}
+          >
+            💼 Accounts
+          </button>
 
-  <button
-    className={active === "budgets" ? "nav-active" : ""}
-    onClick={() => go("budgets")}
-  >
-    📊 Budgets
-  </button>
+          <button
+            className={active === "transactions" ? "nav-active" : ""}
+            onClick={() => go("transactions")}
+          >
+            💳 Transactions
+          </button>
 
-  <button
-    className={active === "bills" ? "nav-active" : ""}
-    onClick={() => go("bills")}
-  >
-    🧾 Bills
-  </button>
+          <button
+            className={active === "budgets" ? "nav-active" : ""}
+            onClick={() => go("budgets")}
+          >
+            📊 Budgets
+          </button>
 
-  <button
-    className={active === "rewards" ? "nav-active" : ""}
-    onClick={() => go("rewards")}
-  >
-    🎁 Rewards
-  </button>
+          <button
+            className={active === "bills" ? "nav-active" : ""}
+            onClick={() => go("bills")}
+          >
+            🧾 Bills
+          </button>
 
-  <button
-    className={active === "insights" ? "nav-active" : ""}
-    onClick={() => go("insights")}
-  >
-    📈 Insights
-  </button>
-</nav>
+          <button
+            className={active === "rewards" ? "nav-active" : ""}
+            onClick={() => go("rewards")}
+          >
+            🎁 Rewards
+          </button>
 
+          <button
+            className={active === "insights" ? "nav-active" : ""}
+            onClick={() => go("insights")}
+          >
+            📈 Insights
+          </button>
+        </nav>
       </div>
 
       <button className="logout-btn" onClick={logout}>

@@ -1,21 +1,70 @@
 // pages/HomeDashboard.jsx
+import { useEffect, useState } from "react";
+import { apiFetch } from "../api";
+
 export default function HomeDashboard({ user }) {
   const name = user?.name || "User";
 
-  /* ================= MOCK DATA ================= */
+  /* ================= STATE ================= */
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [allTransactions, setAllTransactions] = useState([]);
 
-  const accounts = [
-    { name: "Chase Bank", type: "Checking", balance: 5420.5, mask: "**** 1234" },
-    { name: "Bank of America", type: "Savings", balance: 12350.75, mask: "**** 5678" },
-    { name: "Citibank", type: "Credit Card", balance: -1250, mask: "**** 9012" },
-  ];
+  /* ================= LOAD ACCOUNTS ================= */
+  useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        const data = await apiFetch("get", "/accounts/");
+        setAccounts(data || []);
+      } catch {
+        setAccounts([]);
+      }
+    };
 
-  const transactions = [
-    { merchant: "Whole Foods Market", category: " Food & Dining", amount: -125.5, date: " 1 Dec 2024" },
-    { merchant: "Bank of America", category: " Income", amount: 15.5, date: " 1 Dec 2024" },
-    { merchant: "Employer Inc.", category: " Salary", amount: 4500, date: " 30 Nov 2024" },
-  ];
+    loadAccounts();
+  }, []);
 
+  /* ================= LOAD TRANSACTIONS ================= */
+  useEffect(() => {
+    const loadTransactions = async () => {
+      try {
+        const all = await apiFetch("get", "/transactions/");
+        const recent = await apiFetch("get", "/transactions/recent");
+
+        setAllTransactions(all || []);
+        setRecentTransactions((recent || []).slice(0, 5));
+      } catch {
+        setAllTransactions([]);
+        setRecentTransactions([]);
+      }
+    };
+
+    loadTransactions();
+  }, []);
+
+  /* ================= DERIVED VALUES ================= */
+  const totalBalance = accounts.reduce(
+    (sum, a) => sum + (Number(a.balance) || 0),
+    0
+  );
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const monthlyTransactions = allTransactions.filter((t) => {
+    const d = new Date(t.txn_date);
+    return (
+      d.getMonth() === currentMonth &&
+      d.getFullYear() === currentYear
+    );
+  });
+
+  const activeMerchants = new Set(
+    monthlyTransactions.map((t) => t.merchant).filter(Boolean)
+  ).size;
+
+  /* ================= STATIC (INTENTIONAL) ================= */
   const bills = [
     { name: "Electricity Bill", amount: 1200, due: " In 3 days", status: "Due" },
     { name: "Internet Bill", amount: 999, due: " Paid", status: "Paid" },
@@ -27,7 +76,6 @@ export default function HomeDashboard({ user }) {
   ];
 
   /* ================= UI ================= */
-
   return (
     <>
       {/* HEADER */}
@@ -38,19 +86,19 @@ export default function HomeDashboard({ user }) {
       <div className="grid">
         <div className="glass-card">
           <span>Total Balance</span>
-          <strong>₹16,570.25</strong>
-          <small>Across 3 accounts</small>
+          <strong>₹{totalBalance.toFixed(2)}</strong>
+          <small>Across {accounts.length} accounts</small>
         </div>
 
         <div className="glass-card">
           <span>Active Merchants</span>
-          <strong>24</strong>
-          <small>+3 this month</small>
+          <strong>{activeMerchants}</strong>
+          <small>This month</small>
         </div>
 
         <div className="glass-card">
           <span>Transactions</span>
-          <strong>156</strong>
+          <strong>{monthlyTransactions.length}</strong>
           <small>This month</small>
         </div>
 
@@ -65,12 +113,14 @@ export default function HomeDashboard({ user }) {
       <section className="section">
         <h3 className="section-title">Accounts Overview</h3>
         <div className="grid">
-          {accounts.map((a, i) => (
-            <div key={i} className="glass-card">
-              <strong>{a.name}</strong>
-              <small>{a.type} · {a.mask}</small>
-              <p className={a.balance < 0 ? "neg" : "pos"}>
-                ₹{Math.abs(a.balance)}
+          {accounts.map((a) => (
+            <div key={a.id} className="glass-card">
+              <strong>{a.bank_name}</strong>
+              <small>
+                {a.account_type} · {a.masked_account}
+              </small>
+              <p className={Number(a.balance) < 0 ? "neg" : "pos"}>
+                ₹{Math.abs(Number(a.balance)).toFixed(2)}
               </p>
             </div>
           ))}
@@ -83,18 +133,40 @@ export default function HomeDashboard({ user }) {
         <div className="glass-panel">
           <div className="panel-header">
             <h3>Recent Transactions</h3>
-            <button className="link-btn">View All</button>
+            <button
+              className="link-btn"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent("dashboard:navigate", {
+                    detail: "transactions",
+                  })
+                )
+              }
+            >
+              View All
+            </button>
           </div>
 
-          {transactions.map((t, i) => (
-            <div key={i} className="row">
+          {recentTransactions.length === 0 && (
+            <p style={{ opacity: 0.6 }}>No recent transactions</p>
+          )}
+
+          {recentTransactions.map((t) => (
+            <div key={t.id} className="row">
               <div>
-                <strong>{t.merchant}</strong>
-                <small>{t.category}</small>
+                <strong>{t.merchant || t.description}</strong>
+                <small>
+                  {t.category ? ` ${t.category}` : " Uncategorized"}
+                </small>
               </div>
-              <div className={t.amount < 0 ? "neg" : "pos"}>
-                {t.amount < 0 ? "-" : "+"}₹{Math.abs(t.amount)}
-                <small>{t.date}</small>
+
+              <div className={t.txn_type === "debit" ? "neg" : "pos"}>
+                <div>
+                  {t.txn_type === "debit" ? "-" : "+"}₹{t.amount}
+                </div>
+                <small>
+                  {new Date(t.txn_date).toLocaleDateString()}
+                </small>
               </div>
             </div>
           ))}

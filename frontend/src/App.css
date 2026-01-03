@@ -921,8 +921,8 @@ button[disabled] {
 .primary-checkbox {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 4px;
   font-size: 14px;
   color: #ffffff;
 }
@@ -934,10 +934,10 @@ button[disabled] {
 
 .primary-checkbox input[type="checkbox"] {
   appearance: none;
-  width: 18px;
+  width: 10px;
   height: 18px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  border: 1px solid rgb(255, 255, 255);
   background: transparent;
   cursor: pointer;
   position: relative;
@@ -1047,4 +1047,371 @@ button[disabled] {
   .cards-grid {
     grid-template-columns: 1fr;
   }
+}
+
+
+/* ============================= */
+/* TRANSACTIONS – FILTER BUTTONS */
+/* ============================= */
+
+.filter-group {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-group button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #cfd8ff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.filter-group button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.filter-group .filter-active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+}
+
+/* ============================= */
+/* TRANSACTIONS – CATEGORY SELECT */
+/* ============================= */
+
+.txn-table select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+
+  padding: 4px 28px 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Dropdown hover */
+.txn-table select:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Focus ring (subtle, fintech style) */
+.txn-table select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45);
+}
+
+/* Dropdown arrow (CSS-only, no icons needed) */
+.txn-table td {
+  position: relative;
+}
+
+.txn-table td select {
+  background-image: linear-gradient(45deg, transparent 50%, #cfd8ff 50%),
+    linear-gradient(135deg, #cfd8ff 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) calc(50% - 2px),
+    calc(100% - 10px) calc(50% - 2px);
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+}
+
+/* ============================= */
+/* AMOUNT COLOR (already good, but refined) */
+/* ============================= */
+
+.amount.credit {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.amount.debit {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+
+/* ============================= */
+/* TRANSACTION CATEGORY DROPDOWN */
+/* ============================= */
+
+.txn-table select {
+  background-color: rgba(30, 41, 59, 0.9);
+  color: #e5e7eb;
+}
+
+/* OPTION LIST (browser-limited but improved) */
+.txn-table select option {
+  background-color: #0f172a; /* dark slate */
+  color: #e5e7eb;
+  font-size: 13px;
+}
+
+/* Hovered option (works in Firefox & some Chromium builds) */
+.txn-table select option:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+/* Selected option */
+.txn-table select option:checked {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+
+/* ===== CATEGORY FILTER ===== */
+.category-filter-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.filter-icon-btn {
+  margin-left: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+.filter-icon-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.category-filter-popup {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  width: 220px;
+  padding: 15px;
+  border-radius: 14px;
+  z-index: 50;
+}
+
+.category-filter-popup h4 {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #fff;
+}
+
+.category-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.category-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #ddd;
+}
+
+.category-option input {
+  accent-color: #4da3ff;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+
+.filter-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.filter-icon-btn:active {
+  transform: scale(0.96);
+}
+
+
+.filter-popup {
+  position: absolute;
+  right: 40px;
+  top: 90px;
+  width: 260px;
+  padding: 16px;
+  z-index: 50;
+}
+
+.checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  cursor: pointer;
+}
+
+.category-pill {
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-btn svg {
+  opacity: 0.9;
+}
+
+
+/* ================= CSV IMPORT MODAL FIX ================= */
+
+.modal {
+  max-width: 900px;          /* WIDER modal */
+  width: 90%;
+}
+
+.csv-preview-card {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.csv-preview-card table {
+  min-width: 760px;          /* Prevent column crush */
+}
+
+.csv-preview-card th,
+.csv-preview-card td {
+  white-space: nowrap;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.csv-preview-card thead th {
+  opacity: 0.85;
+}
+
+
+/* ================= BUDGET PROGRESS ================= */
+
+progress {
+  width: 100%;
+  height: 10px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+progress::-webkit-progress-value {
+  border-radius: 10px;
+}
+
+/* SAFE */
+progress.budget-safe::-webkit-progress-value {
+  background: linear-gradient(90deg, #3cb371, #2ecc71);
+}
+
+/* WARNING */
+progress.budget-warning::-webkit-progress-value {
+  background: linear-gradient(90deg, #f1c40f, #f39c12);
+}
+
+/* DANGER */
+progress.budget-danger::-webkit-progress-value {
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+
+
+/* ================= GLASS SELECT INPUT (BUDGET MONTH/YEAR) ================= */
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+
+  color: #ffffff;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+
+  outline: none;
+  cursor: pointer;
+
+  min-width: 110px;
+  height: 36px;
+
+  transition: all 0.2s ease;
+}
+
+/* Hover */
+.glass-input:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Focus */
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #4f8cff;
+  box-shadow: 0 0 0 2px rgba(79, 140, 255, 0.25);
+}
+
+/* Dropdown options */
+.glass-input option {
+  background: #0f1c3f;   /* dark blue to match app */
+  color: #ffffff;
+}
+
+/* ================= ALIGN WITH HEADER ================= */
+
+.page-header select.glass-input {
+  margin-right: 4px;
 }

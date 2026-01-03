@@ -96,3 +96,73 @@ class BillUpdate(BaseModel):
     amount_due: Optional[float]
     status: Optional[str]
     auto_pay: Optional[bool]
+
+
+# ================= TRANSACTIONS =================
+
+from datetime import datetime
+from typing import Optional
+
+class TransactionCreate(BaseModel):
+    account_id: int
+    description: str
+    merchant: Optional[str] = None
+    amount: float
+    currency: str = "INR"
+    txn_type: str  # debit / credit
+    txn_date: datetime
+
+
+class TransactionUpdate(BaseModel):
+    category: Optional[str] = None
+    description: Optional[str] = None
+    merchant: Optional[str] = None
+
+
+class TransactionOut(BaseModel):
+    id: int
+    account_id: int
+    description: str
+    category: Optional[str]
+    merchant: Optional[str]
+    amount: float
+    currency: str
+    txn_type: str
+    status: str
+    txn_date: datetime
+
+    class Config:
+        orm_mode = True
+
+
+# ================= BUDGETS =================
+
+from typing import Optional
+from datetime import datetime
+
+
+
+# ================= BUDGETS =================
+
+class BudgetCreate(BaseModel):
+    category: str
+    limit_amount: float
+    month: int
+    year: int
+
+
+class BudgetUpdate(BaseModel):
+    limit_amount: Optional[float] = None
+    spent_amount: Optional[float] = None
+
+
+class BudgetOut(BaseModel):
+    id: int
+    category: str
+    limit_amount: float
+    spent_amount: float
+    month: int
+    year: int
+
+    class Config:
+        from_attributes = True

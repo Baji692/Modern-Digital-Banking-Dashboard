@@ -5,9 +5,6 @@ const API_BASE = "http://127.0.0.1:8000";
 /* ================= AXIOS INSTANCE ================= */
 const api = axios.create({
   baseURL: API_BASE,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 /* ================= REQUEST INTERCEPTOR ================= */
@@ -23,16 +20,18 @@ api.interceptors.request.use(
 );
 
 /* ================= SAFE API FETCH ================= */
-export async function apiFetch(method, url, data = null) {
+export async function apiFetch(method, url, data = null, isForm = false) {
   try {
     const response = await api({
       method: method.toUpperCase(),
       url,
       data,
+      headers: isForm
+        ? {} // ⚠️ IMPORTANT: let browser set multipart headers
+        : { "Content-Type": "application/json" },
     });
     return response.data;
   } catch (err) {
-    // 🔴 HANDLE FASTAPI VALIDATION ERRORS PROPERLY
     let message = "API Error";
 
     const detail = err.response?.data?.detail;
@@ -47,7 +46,6 @@ export async function apiFetch(method, url, data = null) {
       message = err.message;
     }
 
-    // 🔐 AUTO LOGOUT ON TOKEN FAILURE
     if (err.response?.status === 401 || err.response?.status === 403) {
       localStorage.removeItem("finbank_token");
       localStorage.removeItem("finbank_user");
