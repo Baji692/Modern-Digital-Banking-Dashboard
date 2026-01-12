@@ -4,6 +4,7 @@ from typing import Optional
 import csv
 import io
 from datetime import datetime
+from decimal import Decimal
 
 from database import get_db
 from models import Transactions, Accounts
@@ -65,6 +66,7 @@ def get_all_transactions(
         {
             "id": t.id,
             "account_id": t.account_id,
+            "bill_id": t.bill_id,  # ✅ Include bill_id in response
             "description": t.description,
             "category": t.category,
             "merchant": t.merchant,
@@ -100,6 +102,7 @@ def recent_transactions(
         {
             "id": t.id,
             "account_id": t.account_id,
+            "bill_id": t.bill_id,  # ✅ Include bill_id in response
             "bank_name": t.account.bank_name,
             "description": t.description,
             "category": t.category,
@@ -224,12 +227,14 @@ def import_transactions_csv(
         raise HTTPException(status_code=404, detail="Account not found")
 
     if not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+        raise HTTPException(
+            status_code=400, detail="Only CSV files are allowed")
 
     content = file.file.read().decode("utf-8")
     reader = csv.DictReader(io.StringIO(content))
 
-    required_columns = {"txn_date", "description", "merchant", "amount", "txn_type"}
+    required_columns = {"txn_date", "description",
+                        "merchant", "amount", "txn_type"}
     if not required_columns.issubset(reader.fieldnames):
         raise HTTPException(
             status_code=400,
@@ -240,13 +245,16 @@ def import_transactions_csv(
 
     for row in reader:
         try:
-            txn_date = datetime.fromisoformat(row["txn_date"])
-            amount = float(row["amount"])
-            txn_type = row["txn_type"].lower()
+            # Remove empty keys (from trailing commas in CSV)
+            clean_row = {k: v for k, v in row.items() if k and v}
+
+            txn_date = datetime.fromisoformat(clean_row["txn_date"])
+            amount = Decimal(clean_row["amount"])
+            txn_type = clean_row["txn_type"].lower()
 
             category = auto_categorize(
-                description=row["description"],
-                merchant=row.get("merchant"),
+                description=clean_row["description"],
+                merchant=clean_row.get("merchant"),
                 txn_type=txn_type,
             )
 
@@ -259,8 +267,8 @@ def import_transactions_csv(
             transactions_to_insert.append(
                 Transactions(
                     account_id=account_id,
-                    description=row["description"],
-                    merchant=row.get("merchant"),
+                    description=clean_row["description"],
+                    merchant=clean_row.get("merchant"),
                     category=category,
                     amount=amount,
                     currency="INR",
@@ -269,10 +277,10 @@ def import_transactions_csv(
                     txn_date=txn_date,
                 )
             )
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid row data: {row}",
+                detail=f"Invalid row data or format. Please check CSV format: {str(e)}",
             )
 
     db.bulk_save_objects(transactions_to_insert)
