@@ -15,14 +15,6 @@ export default function Bills() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
-  /* ===== BILL PAYMENT ===== */
-  const [showPayModal, setShowPayModal] = useState(false);
-  const [payingBill, setPayingBill] = useState(null);
-  const [accounts, setAccounts] = useState([]);
-  const [selectedAccount, setSelectedAccount] = useState("");
-  const [paying, setPaying] = useState(false);
-  const [transactions, setTransactions] = useState([]);  // ✅ Track transactions for bill links
-
   const [form, setForm] = useState({
     biller_name: "",
     amount_due: "",
@@ -40,28 +32,8 @@ export default function Bills() {
     }
   };
 
-  const loadAccounts = async () => {
-    try {
-      const data = await apiFetch("get", "/accounts/");
-      setAccounts(data || []);
-    } catch {
-      toast.error("Failed to load accounts");
-    }
-  };
-
-  const loadTransactions = async () => {
-    try {
-      const data = await apiFetch("get", "/transactions/");
-      setTransactions(data || []);
-    } catch {
-      // Silently fail - not critical
-    }
-  };
-
   useEffect(() => {
     loadBills();
-    loadAccounts();
-    loadTransactions();
   }, []);
 
   /* ================= CREATE / EDIT ================= */
@@ -84,17 +56,17 @@ export default function Bills() {
   const submit = async () => {
     const payload = editing
       ? {
-        biller_name: form.biller_name,
-        amount_due: Number(form.amount_due),
-        due_date: form.due_date,
-        status: editing.status,
-        auto_pay: editing.auto_pay,
-      }
+          biller_name: form.biller_name,
+          amount_due: Number(form.amount_due),
+          due_date: form.due_date,
+          status: editing.status,
+          auto_pay: editing.auto_pay,
+        }
       : {
-        biller_name: form.biller_name,
-        amount_due: Number(form.amount_due),
-        due_date: form.due_date,
-      };
+          biller_name: form.biller_name,
+          amount_due: Number(form.amount_due),
+          due_date: form.due_date,
+        };
 
     try {
       if (editing) {
@@ -142,67 +114,6 @@ export default function Bills() {
     if (due < today) return "overdue";
     if (due.getTime() === today.getTime()) return "today";
     return "upcoming";
-  };
-
-  /* ===== BILL PAYMENT MODAL ===== */
-  const openPayModal = (bill) => {
-    setPayingBill(bill);
-    setSelectedAccount("");
-    setShowPayModal(true);
-  };
-
-  const payBill = async () => {
-    if (!selectedAccount) {
-      toast.error("Please select an account");
-      return;
-    }
-
-    const account = accounts.find((a) => a.id === parseInt(selectedAccount));
-    if (!account) {
-      toast.error("Account not found");
-      return;
-    }
-
-    if (account.balance < payingBill.amount_due) {
-      toast.error(
-        `Insufficient balance. Required: ₹${payingBill.amount_due}, Available: ₹${account.balance}`
-      );
-      return;
-    }
-
-    setPaying(true);
-    try {
-      const result = await apiFetch(
-        "post",
-        `/bills/${payingBill.id}/pay?account_id=${parseInt(selectedAccount)}`,
-        {}
-      );
-
-      toast.success(`Bill paid successfully! Transaction created.`);
-      setShowPayModal(false);
-      setPayingBill(null);
-      setSelectedAccount("");
-      loadBills();
-      loadAccounts();
-      loadTransactions();  // ✅ Refresh transactions to show bill payment badge
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setPaying(false);
-    }
-  };
-
-  /* ===== GET ACCOUNT FOR PAID BILL ===== */
-  const getPaidFromAccount = (bill) => {
-    // Find transaction for this bill (by matching description)
-    const txn = transactions.find(
-      (t) => t.description === `Bill Payment - ${bill.biller_name}`
-    );
-    if (txn) {
-      const account = accounts.find((a) => a.id === txn.account_id);
-      return account ? `${account.bank_name} (${account.masked_account})` : null;
-    }
-    return null;
   };
 
   const markAsPaid = async (bill) => {
@@ -265,7 +176,7 @@ export default function Bills() {
 
       {/* ===== ANALYTICS ===== */}
 
-
+      
 
       <div className="analytics-grid">
         <div className="stat-card" onClick={() => setActiveFilter("all")}>
@@ -319,15 +230,15 @@ export default function Bills() {
                       {status === "overdue"
                         ? "Overdue"
                         : status === "today"
-                          ? "Due Today"
-                          : "Upcoming"}
+                        ? "Due Today"
+                        : "Upcoming"}
                     </span>
 
                     <button
                       className="action-btn pay-btn"
-                      onClick={() => openPayModal(b)}
+                      onClick={() => markAsPaid(b)}
                     >
-                      💳 Pay
+                      Mark as Paid
                     </button>
 
                     <button
@@ -358,31 +269,13 @@ export default function Bills() {
           </h2>
 
           <div className="cards-grid">
-            {paidBills.map((b) => {
-              const paidFromAccount = getPaidFromAccount(b);
-              return (
-                <div key={b.id} className="glass-card paid-card">
-                  <h3>{b.biller_name}</h3>
-                  <p>₹ {b.amount_due}</p>
-                  <p style={{ fontSize: "12px", opacity: 0.7, marginBottom: "8px" }}>
-                    Paid on: {new Date(b.due_date).toLocaleDateString()}
-                  </p>
-                  {paidFromAccount && (
-                    <p
-                      style={{
-                        fontSize: "11px",
-                        opacity: 0.6,
-                        fontStyle: "italic",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      Paid from: <strong>{paidFromAccount}</strong>
-                    </p>
-                  )}
-                  <span className="bill-pill paid">✓ Paid</span>
-                </div>
-              );
-            })}
+            {paidBills.map((b) => (
+              <div key={b.id} className="glass-card paid-card">
+                <h3>{b.biller_name}</h3>
+                <p>₹ {b.amount_due}</p>
+                <span className="bill-pill paid">✓ Paid</span>
+              </div>
+            ))}
           </div>
         </>
       )}
@@ -440,88 +333,6 @@ export default function Bills() {
               <button
                 className="action-btn edit-btn"
                 onClick={() => setShowDelete(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* ===== PAY BILL MODAL ===== */}
-      {showPayModal && payingBill && (
-        <Modal
-          title={`Pay Bill: ${payingBill.biller_name}`}
-          onClose={() => setShowPayModal(false)}
-        >
-          <div className="modal-body">
-            <div style={{ marginBottom: "20px" }}>
-              <p style={{ fontSize: "14px", opacity: 0.8 }}>
-                Bill Amount: <strong>₹{payingBill.amount_due}</strong>
-              </p>
-              <p style={{ fontSize: "14px", opacity: 0.8 }}>
-                Due Date: {new Date(payingBill.due_date).toLocaleDateString()}
-              </p>
-            </div>
-
-            <label style={{ display: "block", marginBottom: "10px" }}>
-              Select Account to Pay From
-            </label>
-            <select
-              value={selectedAccount}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-              style={{ width: "100%", marginBottom: "15px" }}
-            >
-              <option value="">-- Choose Account --</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.bank_name} ({a.masked_account}) - Balance: ₹{a.balance}
-                </option>
-              ))}
-            </select>
-
-            {selectedAccount && (
-              <div
-                style={{
-                  padding: "12px",
-                  backgroundColor:
-                    accounts.find((a) => a.id === parseInt(selectedAccount))
-                      ?.balance >= payingBill.amount_due
-                      ? "rgba(76, 175, 80, 0.1)"
-                      : "rgba(244, 67, 54, 0.1)",
-                  borderRadius: "6px",
-                  marginBottom: "15px",
-                  fontSize: "14px",
-                }}
-              >
-                {accounts.find((a) => a.id === parseInt(selectedAccount))
-                  ?.balance >= payingBill.amount_due ? (
-                  <span style={{ color: "#4caf50" }}>
-                    ✓ Sufficient balance available
-                  </span>
-                ) : (
-                  <span style={{ color: "#f44336" }}>
-                    ✗ Insufficient balance
-                  </span>
-                )}
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                className="primary-button"
-                onClick={payBill}
-                disabled={paying || !selectedAccount}
-                style={{
-                  opacity: paying || !selectedAccount ? 0.6 : 1,
-                  cursor: paying || !selectedAccount ? "not-allowed" : "pointer",
-                }}
-              >
-                {paying ? "Processing..." : "Pay Bill"}
-              </button>
-              <button
-                className="action-btn edit-btn"
-                onClick={() => setShowPayModal(false)}
               >
                 Cancel
               </button>

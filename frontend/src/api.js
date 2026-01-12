@@ -22,18 +22,14 @@ api.interceptors.request.use(
 /* ================= SAFE API FETCH ================= */
 export async function apiFetch(method, url, data = null, isForm = false) {
   try {
-    const config = {
+    const response = await api({
       method: method.toUpperCase(),
       url,
       data,
-    };
-
-    // For form data, don't set Content-Type to let browser set multipart/form-data
-    if (!isForm) {
-      config.headers = { "Content-Type": "application/json" };
-    }
-
-    const response = await api(config);
+      headers: isForm
+        ? {} // ⚠️ IMPORTANT: let browser set multipart headers
+        : { "Content-Type": "application/json" },
+    });
     return response.data;
   } catch (err) {
     let message = "API Error";

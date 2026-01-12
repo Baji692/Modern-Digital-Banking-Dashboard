@@ -83,8 +83,6 @@ class Transactions(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
-    bill_id = Column(Integer, ForeignKey("bills.id"),
-                     nullable=True)  # ✅ Track bill payments
 
     description = Column(String(255))
     category = Column(String(50))
@@ -101,8 +99,6 @@ class Transactions(Base):
 
     # ✅ FIXED
     account = relationship("Accounts", back_populates="transactions")
-    bill = relationship(
-        "Bills", back_populates="transactions")  # ✅ Link to bill
 
 
 # ================= BILLS =================
@@ -121,13 +117,6 @@ class Bills(Base):
 
     auto_pay = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-
-    # ✅ Relationship to transactions
-    transactions = relationship(
-        "Transactions",
-        back_populates="bill",
-        cascade="all, delete",
-    )
 
 
 # ================= BUDGETS =================

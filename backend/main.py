@@ -1,8 +1,4 @@
 # main.py
-from routes import accounts, transactions, bills, budgets
-from auth import router as auth_router
-from database import engine
-import models
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -15,15 +11,13 @@ load_dotenv()
 # -------------------------------------------------
 # IMPORT MODELS (REGISTER TABLES)
 # -------------------------------------------------
-
-# -------------------------------------------------
-# CREATE ALL TABLES
-# -------------------------------------------------
-models.Base.metadata.create_all(bind=engine)
+import models
 
 # -------------------------------------------------
 # IMPORT ROUTERS AFTER ENV IS READY
 # -------------------------------------------------
+from auth import router as auth_router
+from routes import accounts, transactions, bills, budgets
 
 # -------------------------------------------------
 # CREATE FASTAPI APP
@@ -59,8 +53,6 @@ app.include_router(budgets.router)
 # -------------------------------------------------
 # ROOT CHECK
 # -------------------------------------------------
-
-
 @app.get("/")
 def root():
     return {"status": "FinBank API running"}

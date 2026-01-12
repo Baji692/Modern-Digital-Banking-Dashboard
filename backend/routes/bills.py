@@ -1,13 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
-from decimal import Decimal
 
 from database import get_db
-from models import Bills, Accounts, Transactions
+from models import Bills
 from dependencies import get_current_user
 from schemas import BillCreate, BillUpdate
-from routes.transactions import auto_categorize
 
 router = APIRouter(prefix="/bills", tags=["Bills"])
 
@@ -155,90 +152,3 @@ def delete_bill(
     db.commit()
 
     return {"message": "Bill deleted successfully"}
-
-
-# ============================
-# PAY BILL (WITH ACCOUNT SELECTION)
-# ============================
-@router.post("/{bill_id}/pay")
-def pay_bill(
-    bill_id: int,
-    account_id: int,
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Verify bill exists and belongs to user
-    bill = (
-        db.query(Bills)
-        .filter(
-            Bills.id == bill_id,
-            Bills.user_id == current_user.id
-        )
-        .first()
-    )
-
-    if not bill:
-        raise HTTPException(status_code=404, detail="Bill not found")
-
-    if bill.status == "paid":
-        raise HTTPException(status_code=400, detail="Bill already paid")
-
-    # Verify account exists and belongs to user
-    account = (
-        db.query(Accounts)
-        .filter(
-            Accounts.id == account_id,
-            Accounts.user_id == current_user.id
-        )
-        .first()
-    )
-
-    if not account:
-        raise HTTPException(status_code=404, detail="Account not found")
-
-    # Check if account has sufficient balance
-    bill_amount = Decimal(str(bill.amount_due))
-    if account.balance < bill_amount:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Insufficient balance. Required: ₹{bill_amount}, Available: ₹{account.balance}"
-        )
-
-    # Deduct amount from account balance
-    account.balance -= bill_amount
-
-    # Auto-categorize based on biller name
-    category = auto_categorize(
-        description=f"Bill Payment - {bill.biller_name}",
-        merchant=bill.biller_name,
-        txn_type="debit"
-    )
-
-    # Create transaction record
-    transaction = Transactions(
-        account_id=account_id,
-        bill_id=bill_id,  # ✅ Link transaction to bill
-        description=f"Bill Payment - {bill.biller_name}",
-        merchant=bill.biller_name,
-        category=category,
-        amount=bill_amount,
-        currency=account.currency or "INR",
-        txn_type="debit",
-        status="posted",
-        txn_date=datetime.utcnow(),
-    )
-
-    # Mark bill as paid
-    bill.status = "paid"
-
-    db.add(transaction)
-    db.commit()
-    db.refresh(bill)
-
-    return {
-        "message": "Bill paid successfully",
-        "bill_id": bill.id,
-        "transaction_id": transaction.id,
-        "amount": float(bill_amount),
-        "new_balance": float(account.balance),
-    }

@@ -83,7 +83,7 @@ export default function Transactions() {
         try {
             await apiFetch(
                 "post",
-                `/transactions/import-csv?account_id=${parseInt(accountId)}`,
+                `/transactions/import-csv?account_id=${accountId}`,
                 formData,
                 true
             );
@@ -209,27 +209,9 @@ export default function Transactions() {
 
                     <tbody>
                         {filteredTransactions.map((t) => (
-                            <tr key={t.id} style={{ position: "relative" }}>
+                            <tr key={t.id}>
                                 <td>{new Date(t.txn_date).toLocaleDateString()}</td>
-                                <td>
-                                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                        <span>{t.description}</span>
-                                        {t.description?.includes("Bill Payment") && (
-                                            <span
-                                                style={{
-                                                    backgroundColor: "#FF6B6B",
-                                                    color: "white",
-                                                    fontSize: "10px",
-                                                    padding: "2px 6px",
-                                                    borderRadius: "3px",
-                                                    fontWeight: 600,
-                                                }}
-                                            >
-                                                BILL
-                                            </span>
-                                        )}
-                                    </div>
-                                </td>
+                                <td>{t.description}</td>
                                 <td>{t.merchant || "-"}</td>
                                 <td>
                                     <span className="category-pill">
