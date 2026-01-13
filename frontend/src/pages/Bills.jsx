@@ -212,7 +212,7 @@ export default function Bills() {
       <div className="page-header">
         <h1>Bills</h1>
         <button className="action-btn" onClick={openCreate}>
-          ➕
+          Add Bill
         </button>
       </div>
 

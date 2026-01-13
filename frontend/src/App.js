@@ -212,6 +212,36 @@ function App() {
     return () => window.removeEventListener("dashboard:navigate", handler);
   }, []);
 
+  /* 🔗 HASH ROUTE SUPPORT: update `dashScreen` when URL hash changes */
+  useEffect(() => {
+    const valid = [
+      "home",
+      "accounts",
+      "transactions",
+      "budgets",
+      "bills",
+      "rewards",
+      "insights",
+    ];
+
+    const parseHash = () => {
+      const h = (window.location.hash || "").replace(/^#\/?/, "");
+      if (valid.includes(h)) {
+        setDashScreen(h);
+        setScreen("dashboard");
+        // notify other parts (Sidebar) about the navigation
+        window.dispatchEvent(
+          new CustomEvent("dashboard:navigate", { detail: h })
+        );
+      }
+    };
+
+    // handle initial load and subsequent hash changes
+    parseHash();
+    window.addEventListener("hashchange", parseHash);
+    return () => window.removeEventListener("hashchange", parseHash);
+  }, []);
+
   /* 🔒 RESET FLOW GUARD */
   useEffect(() => {
     if (screen === "resetOtp" || screen === "resetNewPassword") {

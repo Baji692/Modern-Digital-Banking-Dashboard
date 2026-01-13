@@ -175,7 +175,7 @@ export default function Budgets() {
           </select>
 
           <button className="action-btn" onClick={openAdd}>
-            ➕ Add Budget
+            Add Budget
           </button>
         </div>
       </div>

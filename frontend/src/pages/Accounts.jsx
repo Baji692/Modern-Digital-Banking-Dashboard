@@ -158,7 +158,7 @@ export default function Accounts() {
       <div className="page-header">
         <h1>Accounts</h1>
         <button className="action-btn" onClick={openCreate}>
-          ➕ Add Account
+          Add Account
         </button>
       </div>
 
