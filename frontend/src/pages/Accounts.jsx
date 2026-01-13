@@ -146,8 +146,8 @@ export default function Accounts() {
 
   const displayedTransactions = selectedAccount
     ? recentTransactions.filter(
-        (t) => t.bank_name === selectedAccount.bank_name
-      )
+      (t) => t.bank_name === selectedAccount.bank_name
+    )
     : recentTransactions;
 
   if (loading) return <p>Loading accounts...</p>;
@@ -167,9 +167,8 @@ export default function Accounts() {
         {accounts.map((a) => (
           <div
             key={a.id}
-            className={`glass-card ${
-              selectedAccount?.id === a.id ? "active-card" : ""
-            }`}
+            className={`glass-card ${selectedAccount?.id === a.id ? "active-card" : ""
+              }`}
             onClick={() =>
               setSelectedAccount(
                 selectedAccount?.id === a.id ? null : a
@@ -248,7 +247,22 @@ export default function Accounts() {
                   <td>
                     {new Date(t.txn_date).toLocaleDateString()}
                   </td>
-                  <td>{t.description}</td>
+                  <td>
+                    {(() => {
+                      const desc = t.description || "";
+                      const isBill = /bill payment/i.test(desc);
+                      if (isBill) {
+                        const merchantName = t.merchant || desc.replace(/bill payment\s*[–—-]?\s*/i, "");
+                        return (
+                          <>
+                            {merchantName}
+                            <span className="bill-badge">Bill</span>
+                          </>
+                        );
+                      }
+                      return desc;
+                    })()}
+                  </td>
                   <td>{t.merchant || "-"}</td>
                   <td
                     className={

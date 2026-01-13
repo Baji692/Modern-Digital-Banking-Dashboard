@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 
 export default function Bills() {
   const [bills, setBills] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [activeFilter, setActiveFilter] = useState("all");
@@ -15,25 +16,40 @@ export default function Bills() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
+  /* ===== PAY BILL ===== */
+  const [showPay, setShowPay] = useState(false);
+  const [payingBill, setPayingBill] = useState(null);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+
   const [form, setForm] = useState({
     biller_name: "",
     amount_due: "",
     due_date: "",
   });
 
-  /* ================= LOAD BILLS ================= */
+  /* ================= LOAD DATA ================= */
   const loadBills = async () => {
     setLoading(true);
     try {
       const data = await apiFetch("get", "/bills/");
-      setBills(data);
+      setBills(data || []);
     } finally {
       setLoading(false);
     }
   };
 
+  const loadAccounts = async () => {
+    try {
+      const data = await apiFetch("get", "/accounts/");
+      setAccounts(data || []);
+    } catch {
+      setAccounts([]);
+    }
+  };
+
   useEffect(() => {
     loadBills();
+    loadAccounts();
   }, []);
 
   /* ================= CREATE / EDIT ================= */
@@ -56,17 +72,17 @@ export default function Bills() {
   const submit = async () => {
     const payload = editing
       ? {
-          biller_name: form.biller_name,
-          amount_due: Number(form.amount_due),
-          due_date: form.due_date,
-          status: editing.status,
-          auto_pay: editing.auto_pay,
-        }
+        biller_name: form.biller_name,
+        amount_due: Number(form.amount_due),
+        due_date: form.due_date,
+        status: editing.status,
+        auto_pay: editing.auto_pay,
+      }
       : {
-          biller_name: form.biller_name,
-          amount_due: Number(form.amount_due),
-          due_date: form.due_date,
-        };
+        biller_name: form.biller_name,
+        amount_due: Number(form.amount_due),
+        due_date: form.due_date,
+      };
 
     try {
       if (editing) {
@@ -101,6 +117,57 @@ export default function Bills() {
     }
   };
 
+  /* ================= REMIND ME ================= */
+  const sendReminder = async (bill) => {
+    try {
+      const res = await apiFetch(
+        "post",
+        `/bills/${bill.id}/remind`
+      );
+      toast.success(res.message || "Reminder email sent!");
+    } catch (err) {
+      toast.error(err.message || "Failed to send reminder");
+    }
+  };
+
+  /* ================= PAY BILL ================= */
+  const openPay = (bill) => {
+    setPayingBill(bill);
+
+    if (accounts.length === 1) {
+      setSelectedAccountId(accounts[0].id);
+    } else {
+      setSelectedAccountId("");
+    }
+
+    setShowPay(true);
+  };
+
+  const confirmPay = async () => {
+    if (!selectedAccountId) {
+      toast.error("Please select an account");
+      return;
+    }
+
+    try {
+      const res = await apiFetch(
+        "post",
+        `/bills/${payingBill.id}/pay?account_id=${selectedAccountId}`
+      );
+
+      toast.success(res.message);
+
+      setShowPay(false);
+      setPayingBill(null);
+      setSelectedAccountId("");
+
+      loadBills();
+    } catch (err) {
+      console.error("Pay bill error:", err);
+      toast.error(err.message || "Payment failed");
+    }
+  };
+
   /* ================= STATUS ================= */
   const getBillStatus = (bill) => {
     if (bill.status === "paid") return "paid";
@@ -114,25 +181,6 @@ export default function Bills() {
     if (due < today) return "overdue";
     if (due.getTime() === today.getTime()) return "today";
     return "upcoming";
-  };
-
-  const markAsPaid = async (bill) => {
-    try {
-      await apiFetch("put", `/bills/${bill.id}`, {
-        ...bill,
-        status: "paid",
-      });
-
-      setBills((prev) =>
-        prev.map((b) =>
-          b.id === bill.id ? { ...b, status: "paid" } : b
-        )
-      );
-
-      toast.success(`"${bill.biller_name}" marked as paid`);
-    } catch {
-      toast.error("Failed to mark bill as paid");
-    }
   };
 
   if (loading) return <p>Loading bills...</p>;
@@ -150,8 +198,7 @@ export default function Bills() {
     activeFilter === "unpaid" ||
     activeFilter === "overdue";
 
-  const showPaid =
-    activeFilter === "all" || activeFilter === "paid";
+  const showPaid = activeFilter === "all" || activeFilter === "paid";
 
   /* ================= SUMMARY ================= */
   const monthlyPaidTotal = paidBills.reduce(
@@ -165,7 +212,7 @@ export default function Bills() {
       <div className="page-header">
         <h1>Bills</h1>
         <button className="action-btn" onClick={openCreate}>
-          ➕ Add Bill
+          ➕
         </button>
       </div>
 
@@ -175,30 +222,30 @@ export default function Bills() {
       </div>
 
       {/* ===== ANALYTICS ===== */}
-
-      
-
       <div className="analytics-grid">
-        <div className="stat-card" onClick={() => setActiveFilter("all")}>
+        <div
+          className={`stat-card ${activeFilter === "all" ? "active" : ""}`}
+          onClick={() => setActiveFilter("all")}
+        >
           Total Bills: {bills.length}
         </div>
 
         <div
-          className="stat-card green"
+          className={`stat-card green ${activeFilter === "paid" ? "active" : ""}`}
           onClick={() => setActiveFilter("paid")}
         >
           Paid: {paidBills.length}
         </div>
 
         <div
-          className="stat-card yellow"
+          className={`stat-card yellow ${activeFilter === "unpaid" ? "active" : ""}`}
           onClick={() => setActiveFilter("unpaid")}
         >
           Unpaid: {unpaidBills.length}
         </div>
 
         <div
-          className="stat-card red"
+          className={`stat-card red ${activeFilter === "overdue" ? "active" : ""}`}
           onClick={() => setActiveFilter("overdue")}
         >
           Overdue: {overdueBills.length}
@@ -207,12 +254,14 @@ export default function Bills() {
 
       {/* ===== UNPAID BILLS ===== */}
       {showUnpaid && (
-        <div className="cards-grid">
+        <div className="cards-grid unpaid-grid">
           {unpaidBills
             .filter((b) =>
               activeFilter === "overdue"
                 ? getBillStatus(b) === "overdue"
-                : true
+                : activeFilter === "unpaid"
+                  ? true
+                  : true
             )
             .map((b) => {
               const status = getBillStatus(b);
@@ -230,15 +279,23 @@ export default function Bills() {
                       {status === "overdue"
                         ? "Overdue"
                         : status === "today"
-                        ? "Due Today"
-                        : "Upcoming"}
+                          ? "Due Today"
+                          : "Upcoming"}
                     </span>
 
                     <button
                       className="action-btn pay-btn"
-                      onClick={() => markAsPaid(b)}
+                      onClick={() => openPay(b)}
                     >
-                      Mark as Paid
+                      Pay Bill
+                    </button>
+
+                    <button
+                      className="action-btn remind-btn"
+                      onClick={() => sendReminder(b)}
+                      title="Send reminder email"
+                    >
+                      Remind me
                     </button>
 
                     <button
@@ -261,6 +318,22 @@ export default function Bills() {
         </div>
       )}
 
+      {/* ===== EMPTY STATE FOR FILTERED UNPAID ===== */}
+      {showUnpaid &&
+        unpaidBills.filter((b) =>
+          activeFilter === "overdue" ? getBillStatus(b) === "overdue" : true
+        ).length === 0 && (
+          <div className="empty-state">
+            <p>
+              {activeFilter === "overdue"
+                ? "No overdue bills"
+                : activeFilter === "unpaid"
+                  ? "No unpaid bills"
+                  : "No bills found"}
+            </p>
+          </div>
+        )}
+
       {/* ===== PAID BILLS ===== */}
       {showPaid && paidBills.length > 0 && (
         <>
@@ -271,16 +344,65 @@ export default function Bills() {
           <div className="cards-grid">
             {paidBills.map((b) => (
               <div key={b.id} className="glass-card paid-card">
-                <h3>{b.biller_name}</h3>
-                <p>₹ {b.amount_due}</p>
-                <span className="bill-pill paid">✓ Paid</span>
+                <div className="paid-card-header">
+                  <h3>{b.biller_name}</h3>
+                </div>
+                <div className="paid-card-amount">
+                  ₹ {b.amount_due}
+                </div>
+                <div className="paid-card-footer">
+                  <span className="bill-pill paid">✓ Paid</span>
+                  {b.paid_date && (
+                    <span className="paid-date-badge">
+                      {new Date(b.paid_date).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </>
       )}
 
-      {/* ===== MODAL ===== */}
+      {/* ===== PAY MODAL ===== */}
+      {showPay && (
+        <Modal
+          title={`Pay ${payingBill.biller_name}`}
+          onClose={() => setShowPay(false)}
+        >
+          <div className="modal-body">
+            <p>
+              Amount: <strong>₹ {payingBill.amount_due}</strong>
+            </p>
+
+            {accounts.length > 1 && (
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+              >
+                <option value="">Select Account</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.bank_name} ({a.masked_account}) — ₹{a.balance}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {accounts.length === 1 && (
+              <p>
+                Paying from <strong>{accounts[0].bank_name}</strong>
+              </p>
+            )}
+
+            <button className="primary-button" onClick={confirmPay}>
+              Confirm Payment
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ===== CREATE / EDIT MODAL ===== */}
       {showModal && (
         <Modal
           title={editing ? "Edit Bill" : "Create Bill"}

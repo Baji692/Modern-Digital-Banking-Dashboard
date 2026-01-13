@@ -3,12 +3,10 @@
 .dash-shell {
   display: flex;
   min-height: 100vh;
-  background: radial-gradient(
-    circle at top left,
-    #2563eb 0%,
-    #0b1c3f 40%,
-    #020617 70%
-  );
+  background: radial-gradient(circle at top left,
+      #2563eb 0%,
+      #0b1c3f 40%,
+      #020617 70%);
   color: #ffffff;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -25,11 +23,9 @@
 }
 
 .glass {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.14),
-    rgba(255, 255, 255, 0.05)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0.05));
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-right: 1px solid rgba(255, 255, 255, 0.18);
@@ -87,7 +83,8 @@
 .dash-content {
   flex: 1;
   padding: 36px 42px;
-  padding-left: calc(260px + 42px); /* sidebar width + spacing */
+  padding-left: calc(260px + 42px);
+  /* sidebar width + spacing */
   position: relative;
 }
 
@@ -118,11 +115,9 @@
 /* ================= CARDS ================= */
 
 .glass-card {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.18),
-    rgba(255, 255, 255, 0.08)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.08));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 20px;
@@ -262,11 +257,9 @@ progress::-webkit-progress-value {
 }
 
 .glass-panel {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.18),
-    rgba(255, 255, 255, 0.08)
-  );
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.08));
   backdrop-filter: blur(16px);
   border-radius: 18px;
   padding: 18px;
@@ -301,11 +294,23 @@ progress::-webkit-progress-value {
 }
 
 .link-btn {
-  background: transparent;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none;
-  color: #93c5fd;
+  color: #ffffff;
   font-weight: 600;
   cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.link-btn:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .insight {
@@ -322,7 +327,8 @@ progress::-webkit-progress-value {
 
 /* ✅ FIXED CONTENT ALIGNMENT */
 .dash-content {
-  margin-left: 260px; /* sidebar width */
+  margin-left: 260px;
+  /* sidebar width */
   padding: 32px;
   width: 100%;
   max-width: 1200px;
@@ -370,23 +376,10 @@ progress::-webkit-progress-value {
   transition: all 0.2s ease;
 }
 
-.edit-btn {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-}
-
-.edit-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.delete-btn {
-  background: rgba(255, 80, 80, 0.15);
-  color: #ff6b6b;
-}
-
-.delete-btn:hover {
-  background: rgba(255, 80, 80, 0.35);
-}
+/* Edit/Delete button base styles are consolidated later in the file
+   to provide consistent gradients and hover affordances (glow/translate).
+   The earlier simple rgba hover rules were removed because they caused
+   a grey shift on hover. */
 
 .confirm-actions {
   display: flex;
@@ -403,7 +396,7 @@ progress::-webkit-progress-value {
 }
 
 .action-btn {
-  padding: 6px 16px;
+  padding: 8px 16px;
   border-radius: 18px;
   border: none;
   cursor: pointer;
@@ -411,23 +404,8 @@ progress::-webkit-progress-value {
   transition: all 0.2s ease;
 }
 
-.edit-btn {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-}
-
-.edit-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.delete-btn {
-  background: rgba(255, 0, 0, 0.15);
-  color: #ff6b6b;
-}
-
-.delete-btn:hover {
-  background: rgba(255, 0, 0, 0.25);
-}
+/* Legacy simple rgba styles removed — using gradient + glow styles
+   defined later in this file for `.edit-btn` and `.delete-btn`. */
 
 .confirm-actions {
   display: flex;
@@ -460,7 +438,8 @@ progress::-webkit-progress-value {
   left: 0;
   top: 0;
   height: 100vh;
-  width: 240px; /* keep same as your sidebar */
+  width: 240px;
+  /* keep same as your sidebar */
   display: flex;
   flex-direction: column;
 }
@@ -497,7 +476,7 @@ progress::-webkit-progress-value {
 }
 
 /* Top section (logo + nav) */
-.dash-sidebar > div {
+.dash-sidebar>div {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -534,7 +513,8 @@ progress::-webkit-progress-value {
 
 /* ===== MAIN CONTENT ===== */
 .dash-content {
-  margin-left: 260px;      /* SAME AS SIDEBAR WIDTH */
+  margin-left: 260px;
+  /* SAME AS SIDEBAR WIDTH */
   flex: 1;
   height: 100vh;
   overflow-y: auto;
@@ -594,7 +574,7 @@ progress::-webkit-progress-value {
 
 .bill-pill.today {
   color: #38bdf8;
-  border: 1px solid #38bdf8;
+  border: none;
 }
 
 .bill-pill.overdue {
@@ -603,8 +583,9 @@ progress::-webkit-progress-value {
 }
 
 .pay-btn {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: none;
 }
 
 
@@ -636,9 +617,17 @@ progress::-webkit-progress-value {
   font-size: 22px;
 }
 
-.stat-card.green strong { color: #2ecc71; }
-.stat-card.yellow strong { color: #f1c40f; }
-.stat-card.red strong { color: #e74c3c; }
+.stat-card.green strong {
+  color: #2ecc71;
+}
+
+.stat-card.yellow strong {
+  color: #f1c40f;
+}
+
+.stat-card.red strong {
+  color: #e74c3c;
+}
 
 /* ===== SECTION TITLES ===== */
 .section-title {
@@ -656,7 +645,8 @@ progress::-webkit-progress-value {
 /* ===== BILL SUMMARY BAR ===== */
 .summary-card {
   background: rgba(255, 255, 255, 0.95);
-  color: #0b1d3a;            /* 🔑 FIX: dark text */
+  color: #0b1d3a;
+  /* 🔑 FIX: dark text */
   font-weight: 600;
   font-size: 15px;
   padding: 12px 18px;
@@ -743,7 +733,7 @@ button,
 
 .active-card {
   outline: 2px solid #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59,130,246,0.4);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
 }
 
 
@@ -778,4 +768,295 @@ progress.budget-warning::-webkit-progress-value {
 /* DANGER */
 progress.budget-danger::-webkit-progress-value {
   background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+
+
+/* ===== BILL ACTION BUTTONS ===== */
+
+.action-btn {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.pay-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #ffffff;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+/* Hover / pressed affordance for Pay button */
+.pay-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.25);
+  transform: translateY(-2px);
+}
+
+.pay-btn:active {
+  transform: translateY(0) scale(0.995);
+  box-shadow: 0 3px 10px rgba(34, 197, 94, 0.15);
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #0327a7, #0724ca);
+  color: #ffffff;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.edit-btn:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 6px 18px rgb(24, 36, 204);
+  transform: translateY(-2px);
+}
+
+.edit-btn:active {
+  transform: translateY(0) scale(0.995);
+  box-shadow: 0 3px 10px rgba(36, 49, 232, 0.15);
+}
+
+.delete-btn {
+  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+  color: #ffffff;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.delete-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgb(234, 53, 53);
+  transform: translateY(-2px);
+}
+
+.delete-btn:active {
+  transform: translateY(0) scale(0.995);
+  box-shadow: 0 3px 10px rgb(98, 43, 43);
+}
+
+.remind-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.remind-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
+  transform: translateY(-2px);
+}
+
+.remind-btn:active {
+  transform: translateY(0) scale(0.995);
+  box-shadow: 0 3px 10px rgba(217, 119, 6, 0.15);
+}
+
+/* Small 'Bill' badge used in Transactions table */
+.bill-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  margin-left: 8px;
+  border-radius: 999px;
+  font-size: 5px;
+  font-weight: 400;
+  color: #ffffff;
+  background: linear-gradient(90deg, #b91c1c, #b11616);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  vertical-align: middle;
+}
+
+/* ===== STATUS PILLS (DUE TODAY / OVERDUE) ===== */
+
+.bill-pill.today {
+  background: rgba(245, 158, 11, 0.35);
+  color: #ffffff;
+  border: none;
+}
+
+.bill-pill.overdue {
+  background: rgba(220, 38, 38, 0.4);
+  color: #ffffff;
+}
+
+.bill-pill.upcoming {
+  background: rgb(11, 93, 226);
+  color: #ffffff;
+}
+
+.bill-pill.paid {
+  background: rgba(14, 166, 70, 0.35);
+  color: #ffffff;
+}
+
+/* ===== PAY MODAL BUTTON ===== */
+.primary-button {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  color: #ffffff;
+}
+
+
+/* ===== DUE / STATUS PILLS – FINAL POLISH ===== */
+
+.bill-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Due Today – amber glow */
+.bill-pill.today {
+  background: linear-gradient(135deg,
+      rgba(245, 158, 11, 0.85),
+      rgba(217, 119, 6, 0.9));
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+
+/* Upcoming – calm blue */
+.bill-pill.upcoming {
+  background: linear-gradient(135deg,
+      rgba(37, 99, 235, 0.85),
+      rgba(29, 78, 216, 0.9));
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
+}
+
+/* Overdue – danger red */
+.bill-pill.overdue {
+  background: linear-gradient(135deg,
+      rgba(220, 38, 38, 0.9),
+      rgba(153, 27, 27, 0.95));
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
+}
+
+/* Paid – success green */
+.bill-pill.paid {
+  background: linear-gradient(135deg,
+      rgba(34, 197, 94, 0.9),
+      rgba(22, 163, 74, 0.95));
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.35);
+}
+
+/* Empty state (e.g. "No overdue bills") */
+.empty-state {
+  margin-top: 18px;
+}
+
+.empty-state p {
+  background: rgba(255, 255, 255, 0.95);
+  color: #0b1d3a;
+  border-radius: 12px;
+  padding: 14px 18px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Paid bills layout tweaks */
+.paid-card .paid-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.paid-card .paid-amount {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.paid-card .paid-meta {
+  margin: 8px 0 0 0;
+  font-size: 13px;
+  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ================= PAID CARD STYLES ================= */
+
+/* Override glass-card for paid-card */
+.glass-card.paid-card {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  height: 100% !important;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.05)) !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45), inset 0 1px 0 rgba(16, 185, 129, 0.15) !important;
+}
+
+.paid-card-header {
+  margin-bottom: 16px !important;
+  display: block !important;
+}
+
+.paid-card-header h3 {
+  margin: 0 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  letter-spacing: -0.2px !important;
+}
+
+.paid-card-amount {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  margin-bottom: 28px !important;
+  letter-spacing: -0.3px !important;
+}
+
+.paid-card-footer {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 10px !important;
+  align-items: center !important;
+  margin-top: auto !important;
+}
+
+.paid-date-badge {
+  display: inline-block !important;
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  padding: 10px 16px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  box-shadow: none !important;
+  letter-spacing: 0.2px !important;
+  white-space: nowrap !important;
+}
+
+/* Bill pill styling */
+.bill-pill {
+  display: inline-block !important;
+  padding: 10px 18px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px !important;
+}
+
+.bill-pill.paid {
+  background: #00d97f !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.bill-pill.overdue {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35) !important;
+}
+
+.bill-pill.today {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35) !important;
+}
+
+.bill-pill.upcoming {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35) !important;
 }

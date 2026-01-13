@@ -32,7 +32,13 @@ export async function apiFetch(method, url, data = null, isForm = false) {
     });
     return response.data;
   } catch (err) {
+    // Network-level failure (server down / CORS / unreachable)
     let message = "API Error";
+
+    if (!err.response && err.message === "Network Error") {
+      message = "Network Error: could not reach API. Is the backend running at http://127.0.0.1:8000 ?";
+      console.error("API Network Error:", err);
+    }
 
     const detail = err.response?.data?.detail;
 

@@ -1,4 +1,5 @@
-description,merchant,amount,txn_type,txn_date,
-Internet Provider,BSNL,500,debit,2026-01-02,
-Salary Credit,Company XYZ,45000,credit,2026-01-01,
-Water Bill,Municipality,750,debit,2026-01-03,
+description,merchant,amount,txn_type,txn_date
+Internet Provider,BSNL,500,debit,2026-01-02
+Salary Credit,Company XYZ,45000,credit,2026-01-01
+Water Bill,Municipality,750,debit,2026-01-03
+Grocery Shopping,Whole Foods,1200,debit,2026-01-04

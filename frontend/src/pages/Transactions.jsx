@@ -211,7 +211,23 @@ export default function Transactions() {
                         {filteredTransactions.map((t) => (
                             <tr key={t.id}>
                                 <td>{new Date(t.txn_date).toLocaleDateString()}</td>
-                                <td>{t.description}</td>
+                                <td>
+                                    {(() => {
+                                        const desc = t.description || "";
+                                        const isBill = /bill payment/i.test(desc);
+                                        if (isBill) {
+                                            const merchantName = t.merchant || desc.replace(/bill payment\s*[–—-]?\s*/i, "");
+                                            return (
+                                                <>
+                                                    {merchantName}
+                                                    <span className="bill-badge">Bill</span>
+                                                </>
+                                            );
+                                        }
+
+                                        return desc;
+                                    })()}
+                                </td>
                                 <td>{t.merchant || "-"}</td>
                                 <td>
                                     <span className="category-pill">

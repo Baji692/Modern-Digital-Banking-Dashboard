@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, date, time
+from decimal import Decimal
+from services.transaction_utils import auto_categorize
 
 from database import get_db
 from models import Transactions, Accounts
@@ -26,22 +28,22 @@ CATEGORY_RULES = {
 }
 
 
-def auto_categorize(
-    description: str,
-    merchant: Optional[str],
-    txn_type: str
-) -> str:
-    text = f"{description or ''} {merchant or ''}".lower()
+# def auto_categorize(
+#     description: str,
+#     merchant: Optional[str],
+#     txn_type: str,
+# ) -> str:
+#     text = f"{description or ''} {merchant or ''}".lower()
 
-    if txn_type.lower() == "credit":
-        return "Income"
+#     if txn_type.lower() == "credit":
+#         return "Income"
 
-    for category, keywords in CATEGORY_RULES.items():
-        for word in keywords:
-            if word in text:
-                return category
+#     for category, keywords in CATEGORY_RULES.items():
+#         for word in keywords:
+#             if word in text:
+#                 return category
 
-    return "Uncategorized"
+#     return "Uncategorized"
 
 
 # =========================================================
@@ -128,7 +130,7 @@ def create_transaction(
         db.query(Accounts)
         .filter(
             Accounts.id == data.account_id,
-            Accounts.user_id == current_user.id
+            Accounts.user_id == current_user.id,
         )
         .first()
     )
@@ -154,7 +156,7 @@ def create_transaction(
         txn_date=data.txn_date,
     )
 
-    # ✅ BALANCE SYNC (MISSING EARLIER)
+    # BALANCE SYNC
     if data.txn_type.lower() == "debit":
         account.balance -= data.amount
     else:
@@ -183,7 +185,7 @@ def update_transaction(
         .join(Accounts)
         .filter(
             Transactions.id == txn_id,
-            Accounts.user_id == current_user.id
+            Accounts.user_id == current_user.id,
         )
         .first()
     )
@@ -201,7 +203,7 @@ def update_transaction(
 
 
 # =========================================================
-# CSV IMPORT (MILESTONE 1 ⭐)
+# CSV IMPORT (CRASH-SAFE)
 # =========================================================
 
 @router.post("/import-csv")
@@ -215,7 +217,7 @@ def import_transactions_csv(
         db.query(Accounts)
         .filter(
             Accounts.id == account_id,
-            Accounts.user_id == current_user.id
+            Accounts.user_id == current_user.id,
         )
         .first()
     )
@@ -223,44 +225,51 @@ def import_transactions_csv(
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    if not file.filename.endswith(".csv"):
+    if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed")
 
-    content = file.file.read().decode("utf-8")
+    content = file.file.read().decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(content))
 
-    required_columns = {"txn_date", "description", "merchant", "amount", "txn_type"}
-    if not required_columns.issubset(reader.fieldnames):
-        raise HTTPException(
-            status_code=400,
-            detail=f"CSV must contain columns: {required_columns}",
-        )
+    required_columns = {"txn_date", "description", "amount", "txn_type"}
+    missing = required_columns - set(reader.fieldnames or [])
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing columns: {missing}")
 
     transactions_to_insert = []
 
-    for row in reader:
+    for row_number, row in enumerate(reader, start=2):
+        row = {k.strip(): v.strip() for k, v in row.items() if k and v}
+
         try:
-            txn_date = datetime.fromisoformat(row["txn_date"])
-            amount = float(row["amount"])
+            parsed_date = datetime.strptime(row["txn_date"], "%Y-%m-%d").date()
+            txn_date = datetime.combine(parsed_date, time.min)
+
+            amount = Decimal(row["amount"])
             txn_type = row["txn_type"].lower()
+
+            if txn_type not in {"debit", "credit"}:
+                raise ValueError("Invalid txn_type")
+
+            merchant = row.get("merchant") or None
 
             category = auto_categorize(
                 description=row["description"],
-                merchant=row.get("merchant"),
+                merchant=merchant,
                 txn_type=txn_type,
             )
 
-            # ✅ BALANCE SYNC (CSV)
+            # ✅ SAFE BALANCE UPDATE
             if txn_type == "debit":
-                account.balance -= amount
+                account.balance = (account.balance or Decimal("0.00")) - amount
             else:
-                account.balance += amount
+                account.balance = (account.balance or Decimal("0.00")) + amount
 
             transactions_to_insert.append(
                 Transactions(
                     account_id=account_id,
                     description=row["description"],
-                    merchant=row.get("merchant"),
+                    merchant=merchant,
                     category=category,
                     amount=amount,
                     currency="INR",
@@ -269,10 +278,11 @@ def import_transactions_csv(
                     txn_date=txn_date,
                 )
             )
-        except Exception:
+
+        except Exception as e:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid row data: {row}",
+                detail=f"Row {row_number} error: {str(e)} | Data: {row}",
             )
 
     db.bulk_save_objects(transactions_to_insert)

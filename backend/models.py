@@ -114,8 +114,8 @@ class Bills(Base):
 
     amount_due = Column(Numeric(14, 2), nullable=False)
     status = Column(String(15), default="upcoming")
-
     auto_pay = Column(Boolean, default=False)
+    paid_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

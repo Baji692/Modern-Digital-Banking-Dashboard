@@ -13,6 +13,14 @@ export default function Sidebar({ logout }) {
     );
   };
 
+  useEffect(() => {
+    const handleNavigate = (event) => {
+      setActive(event.detail);
+    };
+    window.addEventListener("dashboard:navigate", handleNavigate);
+    return () => window.removeEventListener("dashboard:navigate", handleNavigate);
+  }, []);
+
   // export default function Sidebar({ logout }) {
   //   const go = (screen) =>
   //     window.dispatchEvent(new CustomEvent("dashboard:navigate", { detail: screen }));

@@ -1,19 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 
 from database import get_db
 from models import Budgets
+from dependencies import get_current_user
 from schemas import BudgetCreate, BudgetUpdate
-from auth import get_current_user
 from services.budget_service import calculate_spent_amount
 
 router = APIRouter(prefix="/budgets", tags=["Budgets"])
 
 
-# =====================================================
-# GET ALL BUDGETS (AUTO-CALCULATED)
-# =====================================================
-@router.get("/")
+@router.get("/", response_model=List[dict])
 def get_budgets(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -21,53 +19,36 @@ def get_budgets(
     budgets = (
         db.query(Budgets)
         .filter(Budgets.user_id == current_user.id)
+        .order_by(Budgets.month.asc(), Budgets.year.asc())
         .all()
     )
 
-    # 🔥 AUTO-CALCULATE spent_amount
-    for budget in budgets:
-        budget.spent_amount = calculate_spent_amount(
-            db=db,
-            user_id=current_user.id,
-            category=budget.category,
-            month=budget.month,
-            year=budget.year,
-        )
+    out = []
+    for b in budgets:
+        spent = calculate_spent_amount(
+            db, current_user.id, b.category, b.month, b.year)
+        out.append({
+            "id": b.id,
+            "category": b.category,
+            "limit_amount": float(b.limit_amount),
+            "spent_amount": float(spent),
+            "month": b.month,
+            "year": b.year,
+        })
 
-    return budgets
+    return out
 
 
-# =====================================================
-# CREATE BUDGET
-# =====================================================
 @router.post("/")
 def create_budget(
     data: BudgetCreate,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    existing = (
-        db.query(Budgets)
-        .filter(
-            Budgets.user_id == current_user.id,
-            Budgets.category == data.category,
-            Budgets.month == data.month,
-            Budgets.year == data.year,
-        )
-        .first()
-    )
-
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="Budget already exists for this category and month",
-        )
-
     budget = Budgets(
         user_id=current_user.id,
         category=data.category,
         limit_amount=data.limit_amount,
-        spent_amount=0.00,  # calculated dynamically
         month=data.month,
         year=data.year,
     )
@@ -76,12 +57,16 @@ def create_budget(
     db.commit()
     db.refresh(budget)
 
-    return {"message": "Budget created successfully"}
+    return {
+        "id": budget.id,
+        "category": budget.category,
+        "limit_amount": float(budget.limit_amount),
+        "spent_amount": float(0),
+        "month": budget.month,
+        "year": budget.year,
+    }
 
 
-# =====================================================
-# UPDATE BUDGET (ONLY LIMIT)
-# =====================================================
 @router.put("/{budget_id}")
 def update_budget(
     budget_id: int,
@@ -91,27 +76,34 @@ def update_budget(
 ):
     budget = (
         db.query(Budgets)
-        .filter(
-            Budgets.id == budget_id,
-            Budgets.user_id == current_user.id,
-        )
+        .filter(Budgets.id == budget_id, Budgets.user_id == current_user.id)
         .first()
     )
 
     if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+        raise HTTPException(404, "Budget not found")
 
-    if data.limit_amount is not None:
-        budget.limit_amount = data.limit_amount
+    update_data = data.dict(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(budget, key, value)
 
     db.commit()
+    db.refresh(budget)
 
-    return {"message": "Budget updated successfully"}
+    spent = calculate_spent_amount(
+        db, current_user.id, budget.category, budget.month, budget.year)
+
+    return {
+        "id": budget.id,
+        "category": budget.category,
+        "limit_amount": float(budget.limit_amount),
+        "spent_amount": float(spent),
+        "month": budget.month,
+        "year": budget.year,
+    }
 
 
-# =====================================================
-# DELETE BUDGET
-# =====================================================
 @router.delete("/{budget_id}")
 def delete_budget(
     budget_id: int,
@@ -120,15 +112,12 @@ def delete_budget(
 ):
     budget = (
         db.query(Budgets)
-        .filter(
-            Budgets.id == budget_id,
-            Budgets.user_id == current_user.id,
-        )
+        .filter(Budgets.id == budget_id, Budgets.user_id == current_user.id)
         .first()
     )
 
     if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+        raise HTTPException(404, "Budget not found")
 
     db.delete(budget)
     db.commit()
