@@ -140,3 +140,40 @@ class Budgets(Base):
     year = Column(Integer, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+
+# ================= REWARDS =================
+
+
+class Rewards(Base):
+    __tablename__ = "rewards"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    program_name = Column(String(100), nullable=False)
+    points_balance = Column(Integer, default=0)
+    last_updated = Column(TIMESTAMP, default=func.now())
+
+
+# ================= ALERTS =================
+
+class Alerts(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    type = Column(String(50), nullable=False)
+    message = Column(String, nullable=False)
+    created_at = Column(TIMESTAMP, default=func.now())
+
+
+# ================= ADMIN LOGS =================
+
+class AdminLogs(Base):
+    __tablename__ = "admin_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)
+    target_type = Column(String(100), nullable=False)
+    target_id = Column(Integer, nullable=False)
+    timestamp = Column(TIMESTAMP, default=func.now())

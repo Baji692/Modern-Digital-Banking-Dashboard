@@ -35,6 +35,10 @@ export default function Accounts() {
     try {
       const data = await apiFetch("get", "/accounts/");
       setAccounts(data || []);
+    } catch (err) {
+      console.error("Error loading accounts:", err);
+      toast.error("Failed to load accounts: " + err.message);
+      setAccounts([]);
     } finally {
       setLoading(false);
     }
@@ -44,7 +48,8 @@ export default function Accounts() {
     try {
       const data = await apiFetch("get", "/transactions/recent");
       setRecentTransactions(data || []);
-    } catch {
+    } catch (err) {
+      console.error("Error loading transactions:", err);
       setRecentTransactions([]);
     }
   };
@@ -146,7 +151,7 @@ export default function Accounts() {
 
   const displayedTransactions = selectedAccount
     ? recentTransactions.filter(
-      (t) => t.bank_name === selectedAccount.bank_name
+      (t) => t.account_id === selectedAccount.id
     )
     : recentTransactions;
 

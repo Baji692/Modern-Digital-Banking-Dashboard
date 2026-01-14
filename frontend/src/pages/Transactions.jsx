@@ -40,6 +40,7 @@ export default function Transactions() {
     /* ===== CSV ===== */
     const [showUpload, setShowUpload] = useState(false);
     const [csvFile, setCsvFile] = useState(null);
+    const [uploading, setUploading] = useState(false);
     const [accounts, setAccounts] = useState([]);
     const [accountId, setAccountId] = useState("");
 
@@ -80,6 +81,7 @@ export default function Transactions() {
         const formData = new FormData();
         formData.append("file", csvFile);
 
+        setUploading(true);
         try {
             await apiFetch(
                 "post",
@@ -94,6 +96,8 @@ export default function Transactions() {
             loadTransactions();
         } catch (err) {
             toast.error(err.message);
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -230,9 +234,29 @@ export default function Transactions() {
                                 </td>
                                 <td>{t.merchant || "-"}</td>
                                 <td>
-                                    <span className="category-pill">
-                                        {t.category || "Uncategorized"}
-                                    </span>
+                                    <select
+                                        className="category-select"
+                                        value={t.category || "Uncategorized"}
+                                        onChange={async (e) => {
+                                            const newCat = e.target.value;
+                                            try {
+                                                await apiFetch("put", `/transactions/${t.id}`, { category: newCat });
+                                                setTransactions((prev) =>
+                                                    prev.map((tx) => (tx.id === t.id ? { ...tx, category: newCat } : tx))
+                                                );
+                                                toast.success("Category updated");
+                                            } catch (err) {
+                                                console.error("Category update error:", err);
+                                                toast.error(err.message || "Failed to update category");
+                                            }
+                                        }}
+                                    >
+                                        {CATEGORY_OPTIONS.map((c) => (
+                                            <option key={c} value={c}>
+                                                {c}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </td>
                                 <td
                                     className={
@@ -258,27 +282,28 @@ export default function Transactions() {
                     className="csv-modal"
                 >
                     <div className="modal-body">
-                        <p style={{ fontWeight: 600, marginBottom: "6px" }}>
-                            CSV Format Guidelines
-                        </p>
-
-                        <ul style={{ fontSize: "13px", opacity: 0.85 }}>
-                            <li>
-                                Required columns:{" "}
-                                <b>description, amount, txn_type, txn_date</b>
-                            </li>
-                            <li>
-                                Optional columns: <b>merchant, currency</b>
-                            </li>
-                            <li>
-                                txn_type values: <b>debit</b> or <b>credit</b>
-                            </li>
-                            <li>
-                                Date format: <b>YYYY-MM-DD</b>
-                            </li>
-                        </ul>
-
                         <div className="glass-card csv-preview-card">
+                            <div className="csv-guidelines">
+                                <p style={{ fontWeight: 600, marginBottom: "6px" }}>
+                                    <span className="guideline-tag">CSV Format Guidelines</span>
+                                </p>
+
+                                <ul style={{ fontSize: "13px", opacity: 0.95, marginTop: 6 }}>
+                                    <li>
+                                        Required columns: <b>description, amount, txn_type, txn_date</b>
+                                    </li>
+                                    <li>
+                                        Optional columns: <b>merchant, currency</b>
+                                    </li>
+                                    <li>
+                                        txn_type values: <b>debit</b> or <b>credit</b>
+                                    </li>
+                                    <li>
+                                        Date format: <b>YYYY-MM-DD</b>
+                                    </li>
+                                </ul>
+                            </div>
+
                             <div className="csv-table-wrapper">
                                 <table className="txn-table csv-preview-table">
                                     <thead>
@@ -323,26 +348,46 @@ export default function Transactions() {
 
                         <hr style={{ margin: "16px 0", opacity: 0.2 }} />
 
-                        <select
-                            value={accountId}
-                            onChange={(e) => setAccountId(e.target.value)}
-                        >
-                            <option value="">Select Account</option>
-                            {accounts.map((a) => (
-                                <option key={a.id} value={a.id}>
-                                    {a.bank_name} ({a.masked_account})
-                                </option>
-                            ))}
-                        </select>
+                        <div className="row-inputs">
+                            <select
+                                className="account-select"
+                                value={accountId}
+                                onChange={(e) => setAccountId(e.target.value)}
+                            >
+                                <option value="">Select Account</option>
+                                {accounts.map((a) => (
+                                    <option key={a.id} value={a.id}>
+                                        {a.bank_name} ({a.masked_account})
+                                    </option>
+                                ))}
+                            </select>
 
-                        <input
-                            type="file"
-                            accept=".csv"
-                            onChange={(e) => setCsvFile(e.target.files[0])}
-                        />
+                            <div className="file-input-wrap">
+                                <input
+                                    id="csvFileInput"
+                                    type="file"
+                                    accept=".csv"
+                                    style={{ display: "none" }}
+                                    onChange={(e) => setCsvFile(e.target.files[0])}
+                                />
 
-                        <button className="primary-button" onClick={uploadCSV}>
-                            Upload
+                                <button
+                                    type="button"
+                                    className="file-input-button"
+                                    onClick={() => document.getElementById("csvFileInput").click()}
+                                    disabled={uploading}
+                                >
+                                    Choose CSV File
+                                </button>
+
+                                <span className="file-name">
+                                    {csvFile ? csvFile.name : "No file selected"}
+                                </span>
+                            </div>
+                        </div>
+
+                        <button className="primary-button" onClick={uploadCSV} disabled={uploading}>
+                            {uploading ? "Uploading..." : "Upload"}
                         </button>
                     </div>
                 </Modal>

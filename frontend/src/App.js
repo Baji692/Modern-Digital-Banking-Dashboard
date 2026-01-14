@@ -66,7 +66,7 @@ function LoginPage({ onLogin, navigate }) {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/login", {
+      const res = await fetch("http://127.0.0.1:9000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -202,6 +202,9 @@ function App() {
     if (savedUser && token) {
       setUser(JSON.parse(savedUser));
       setScreen("dashboard");
+      // Reset to home on page refresh
+      setDashScreen("home");
+      window.location.hash = "#/home";
     }
   }, []);
 
@@ -226,13 +229,20 @@ function App() {
 
     const parseHash = () => {
       const h = (window.location.hash || "").replace(/^#\/?/, "");
-      if (valid.includes(h)) {
+      // Only navigate to the hash route if user is already logged in
+      if (valid.includes(h) && localStorage.getItem("finbank_token")) {
         setDashScreen(h);
         setScreen("dashboard");
         // notify other parts (Sidebar) about the navigation
         window.dispatchEvent(
           new CustomEvent("dashboard:navigate", { detail: h })
         );
+      } else if (h === "") {
+        // If no hash, default to home when logged in
+        if (localStorage.getItem("finbank_token")) {
+          setDashScreen("home");
+          setScreen("dashboard");
+        }
       }
     };
 

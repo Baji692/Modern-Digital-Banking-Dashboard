@@ -233,11 +233,13 @@ body {
   font-weight: 600;
   cursor: pointer;
   margin-top: 4px;
-  transition: background 0.15s ease, transform 0.1s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease, backdrop-filter 0.2s ease;
 }
 
 .primary-button:hover {
-  background: #1e40af;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.8), rgba(30, 64, 175, 0.8));
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transform: translateY(-0.5px);
 }
 
@@ -1111,11 +1113,24 @@ button[disabled] {
   margin-top: 14px;
 }
 
+.bill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.bill-header h3 {
+  margin: 0;
+  flex: 1;
+}
+
 .bill-pill {
   display: inline-block !important;
-  padding: 8px 16px !important;
-  border-radius: 10px !important;
-  font-size: 13px !important;
+  padding: 4px 10px !important;
+  border-radius: 18px !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
 }
 
@@ -1420,8 +1435,9 @@ button[disabled] {
 }
 
 .csv-preview-card table {
-  min-width: 760px;
-  /* Prevent column crush */
+  min-width: 0;
+  /* allow table to fit container */
+  width: 100%;
 }
 
 .csv-preview-card th,

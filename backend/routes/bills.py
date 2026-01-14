@@ -200,6 +200,7 @@ def update_bill(
         "due_date",
         "status",
         "auto_pay",
+        "reminder_time",
     }
 
     for key, value in update_data.items():
@@ -284,10 +285,13 @@ def send_bill_reminder(
             amount=str(bill.amount_due),
             due_date=due_date_str
         )
+        logging.info(
+            f"Reminder email sent successfully to {user.email} for bill {bill.biller_name}")
         return {"message": "Reminder email sent successfully"}
     except Exception as e:
-        logging.exception("Error sending bill reminder email")
+        error_msg = str(e)
+        logging.exception(f"Error sending bill reminder email: {error_msg}")
         raise HTTPException(
             status_code=500,
-            detail="Failed to send reminder email"
+            detail=f"Failed to send reminder email: {error_msg}"
         )

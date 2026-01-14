@@ -6,7 +6,7 @@ import "./App.css";
 import finBankLogo from "./finbank_logo13-removebg-preview.png";
 import bankIcon from "./bank.png";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "http://127.0.0.1:9000";
 
 /* ---------------- HELPERS ---------------- */
 

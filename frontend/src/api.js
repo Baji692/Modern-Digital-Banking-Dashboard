@@ -36,7 +36,7 @@ export async function apiFetch(method, url, data = null, isForm = false) {
     let message = "API Error";
 
     if (!err.response && err.message === "Network Error") {
-      message = "Network Error: could not reach API. Is the backend running at http://127.0.0.1:8000 ?";
+      message = "Network Error: could not reach API. Is the backend running at http://127.0.0.1:9000 ?";
       console.error("API Network Error:", err);
     }
 

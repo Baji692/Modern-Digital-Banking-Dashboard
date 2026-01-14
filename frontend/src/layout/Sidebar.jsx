@@ -8,6 +8,7 @@ export default function Sidebar({ logout }) {
 
   const go = (screen) => {
     setActive(screen);
+    window.location.hash = `#/${screen}`;
     window.dispatchEvent(
       new CustomEvent("dashboard:navigate", { detail: screen })
     );

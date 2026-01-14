@@ -3,10 +3,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASS = os.getenv("SMTP_PASS")
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USERNAME") or os.getenv("SMTP_USER")
+SMTP_PASS = os.getenv("SMTP_PASSWORD") or os.getenv("SMTP_PASS")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USER)
 
 
 def send_otp_email(to_email: str, otp: str):
@@ -35,15 +36,12 @@ def send_otp_email(to_email: str, otp: str):
 def send_email(to_email: str, subject: str, body: str):
     msg = MIMEText(body)
     msg["Subject"] = subject
-    msg["From"] = os.getenv("SMTP_FROM_EMAIL")
+    msg["From"] = SMTP_FROM_EMAIL
     msg["To"] = to_email
 
-    with smtplib.SMTP(os.getenv("SMTP_HOST"), int(os.getenv("SMTP_PORT"))) as server:
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.starttls()
-        server.login(
-            os.getenv("SMTP_USERNAME"),
-            os.getenv("SMTP_PASSWORD")
-        )
+        server.login(SMTP_USER, SMTP_PASS)
         server.send_message(msg)
 
 

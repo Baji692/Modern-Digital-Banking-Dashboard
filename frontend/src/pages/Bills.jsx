@@ -27,6 +27,12 @@ export default function Bills() {
     due_date: "",
   });
 
+  /* Global auto-reminder setting (stored in localStorage) */
+  const [globalAutoReminder, setGlobalAutoReminder] = useState(false);
+
+  /* Reminder schedule preferences per bill (stored in localStorage) */
+  const [reminderSchedules, setReminderSchedules] = useState({});
+
   /* ================= LOAD DATA ================= */
   const loadBills = async () => {
     setLoading(true);
@@ -50,6 +56,16 @@ export default function Bills() {
   useEffect(() => {
     loadBills();
     loadAccounts();
+
+    // Load global auto-reminder setting from localStorage
+    const savedAutoReminder = localStorage.getItem("bill_global_auto_reminder");
+    setGlobalAutoReminder(savedAutoReminder === "true");
+
+    // Load reminder schedules from localStorage
+    const savedSchedules = localStorage.getItem("bill_reminder_schedules");
+    if (savedSchedules) {
+      setReminderSchedules(JSON.parse(savedSchedules));
+    }
   }, []);
 
   /* ================= CREATE / EDIT ================= */
@@ -124,11 +140,107 @@ export default function Bills() {
         "post",
         `/bills/${bill.id}/remind`
       );
-      toast.success(res.message || "Reminder email sent!");
+      toast.success(res.message || "Reminder scheduled successfully!");
     } catch (err) {
-      toast.error(err.message || "Failed to send reminder");
+      console.error("Reminder error details:", err);
+      let errorMsg = "Failed to set reminder";
+      if (err.message) {
+        errorMsg = err.message;
+      } else if (err.detail) {
+        errorMsg = err.detail;
+      } else if (typeof err === "string") {
+        errorMsg = err;
+      }
+      toast.error(errorMsg);
     }
   };
+
+  /* ================= REMINDER SCHEDULE ================= */
+  const setReminderSchedule = (billId, schedule) => {
+    const updated = { ...reminderSchedules };
+    if (schedule === "no_reminder") {
+      delete updated[billId];
+    } else {
+      updated[billId] = schedule;
+    }
+    setReminderSchedules(updated);
+    localStorage.setItem("bill_reminder_schedules", JSON.stringify(updated));
+
+    if (schedule === "no_reminder") {
+      toast.info("Reminder cancelled");
+    } else {
+      // Convert schedule value to readable format
+      const scheduleLabels = {
+        "send_now": "Send Now",
+        "1440": "24 hours before",
+        "720": "12 hours before",
+        "60": "1 hour before",
+        "30": "30 minutes before"
+      };
+      const readableSchedule = scheduleLabels[schedule] || schedule;
+      toast.info(`Reminder set to: ${readableSchedule}`);
+
+      // If user selected Send Now, trigger the reminder API immediately
+      if (schedule === "send_now") {
+        const bill = bills.find((b) => b.id === billId);
+        if (bill) {
+          sendReminder(bill);
+          // Clear the saved schedule to avoid repeated sends
+          const after = { ...updated };
+          delete after[billId];
+          setReminderSchedules(after);
+          localStorage.setItem("bill_reminder_schedules", JSON.stringify(after));
+        }
+      }
+    }
+  };
+
+
+  /* ================= GLOBAL AUTO REMINDER ================= */
+  const toggleGlobalAutoReminder = () => {
+    const newValue = !globalAutoReminder;
+    setGlobalAutoReminder(newValue);
+    localStorage.setItem("bill_global_auto_reminder", newValue.toString());
+
+    if (newValue) {
+      toast.success("Auto-reminders enabled for all active bills");
+    } else {
+      toast.info("Auto-reminders disabled");
+    }
+  };
+
+  // Check auto-reminders every minute (applies to all bills if global is enabled)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (globalAutoReminder) {
+        bills.forEach((bill) => {
+          const schedule = reminderSchedules[bill.id];
+          if (bill.status !== "paid" && schedule && schedule !== "no_reminder") {
+            // Handle "send_now" option
+            if (schedule === "send_now") {
+              sendReminder(bill);
+              // Remove after sending to avoid repeated sends
+              setReminderSchedule(bill.id, "no_reminder");
+              return;
+            }
+
+            const now = new Date();
+            const dueDate = new Date(bill.due_date);
+            const minutesUntilDue = (dueDate - now) / (1000 * 60);
+
+            // Convert schedule minutes to compare with minutesUntilDue
+            const reminderMinutes = parseInt(schedule);
+            // Send reminder when within 1 minute window of scheduled time
+            if (minutesUntilDue <= reminderMinutes && minutesUntilDue > reminderMinutes - 1) {
+              sendReminder(bill);
+            }
+          }
+        });
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [bills, globalAutoReminder, reminderSchedules, setReminderSchedule]);
 
   /* ================= PAY BILL ================= */
   const openPay = (bill) => {
@@ -211,9 +323,24 @@ export default function Bills() {
       {/* ===== HEADER ===== */}
       <div className="page-header">
         <h1>Bills</h1>
-        <button className="action-btn" onClick={openCreate}>
-          Add Bill
-        </button>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <button
+            className={`action-btn ${globalAutoReminder ? "auto-active" : ""}`}
+            onClick={toggleGlobalAutoReminder}
+            title="Enable/disable automatic reminders for all bills"
+            style={{
+              background: globalAutoReminder
+                ? "linear-gradient(135deg, #10b981, #059669)"
+                : "linear-gradient(135deg, #64748b, #475569)",
+              padding: "10px 16px",
+            }}
+          >
+            {globalAutoReminder ? "⏰ Auto On" : "⏰ Auto Off"}
+          </button>
+          <button className="action-btn" onClick={openCreate}>
+            Add Bill
+          </button>
+        </div>
       </div>
 
       {/* ===== MONTH SUMMARY ===== */}
@@ -268,13 +395,8 @@ export default function Bills() {
 
               return (
                 <div key={b.id} className="glass-card">
-                  <h3>{b.biller_name}</h3>
-                  <p>₹ {b.amount_due}</p>
-                  <p>
-                    Due: {new Date(b.due_date).toLocaleDateString()}
-                  </p>
-
-                  <div className="card-actions">
+                  <div className="bill-header">
+                    <h3>{b.biller_name}</h3>
                     <span className={`bill-pill ${status}`}>
                       {status === "overdue"
                         ? "Overdue"
@@ -282,7 +404,13 @@ export default function Bills() {
                           ? "Due Today"
                           : "Upcoming"}
                     </span>
+                  </div>
+                  <p>₹ {b.amount_due}</p>
+                  <p>
+                    Due: {new Date(b.due_date).toLocaleDateString()}
+                  </p>
 
+                  <div className="card-actions">
                     <button
                       className="action-btn pay-btn"
                       onClick={() => openPay(b)}
@@ -290,13 +418,19 @@ export default function Bills() {
                       Pay Bill
                     </button>
 
-                    <button
-                      className="action-btn remind-btn"
-                      onClick={() => sendReminder(b)}
-                      title="Send reminder email"
+                    <select
+                      className="action-select reminder-select"
+                      value={reminderSchedules[b.id] || "no_reminder"}
+                      onChange={(e) => setReminderSchedule(b.id, e.target.value)}
+                      title="Set reminder schedule"
                     >
-                      Remind me
-                    </button>
+                      <option value="no_reminder">No Reminder</option>
+                      <option value="send_now">Send Now</option>
+                      <option value="1440">24 hours before</option>
+                      <option value="720">12 hours before</option>
+                      <option value="60">1 hour before</option>
+                      <option value="30">30 minutes before</option>
+                    </select>
 
                     <button
                       className="action-btn edit-btn"

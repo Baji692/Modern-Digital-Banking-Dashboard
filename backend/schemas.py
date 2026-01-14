@@ -1,4 +1,11 @@
+from pydantic import BaseModel, EmailStr
+from datetime import datetime
+from typing import Optional
+from datetime import date
+from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 from pydantic import BaseModel, Field, EmailStr
+
 
 class RegisterUser(BaseModel):
     name: str
@@ -14,27 +21,28 @@ class LoginUser(BaseModel):
     email: EmailStr
     password: str
 
-class ForgotPassword(BaseModel):
-    email: EmailStr
-    
-from pydantic import BaseModel, EmailStr
 
 class ForgotPassword(BaseModel):
     email: EmailStr
+
+
+class ForgotPassword(BaseModel):
+    email: EmailStr
+
 
 class VerifyOtp(BaseModel):
     email: EmailStr
     otp: str
+
 
 class ResetPassword(BaseModel):
     email: EmailStr
     new_password: str
 
 
-from pydantic import BaseModel, EmailStr
-
 class SendRegisterOTP(BaseModel):
     email: EmailStr
+
 
 class VerifyRegisterOTP(BaseModel):
     name: str
@@ -43,8 +51,8 @@ class VerifyRegisterOTP(BaseModel):
     password: str
     otp: str
 
+
 # schemas.py
-from pydantic import BaseModel, EmailStr, Field
 
 
 class ResetPassword(BaseModel):
@@ -54,11 +62,9 @@ class ResetPassword(BaseModel):
 
 
 # schemas.py
-from pydantic import BaseModel
-from datetime import date
-from typing import Optional
 
 # ================= ACCOUNTS =================
+
 
 class AccountCreate(BaseModel):
     bank_name: str
@@ -69,8 +75,6 @@ class AccountCreate(BaseModel):
     is_primary: bool = False
 
 
-
-
 class AccountUpdate(BaseModel):
     bank_name: Optional[str] = None
     account_type: Optional[str] = None
@@ -78,7 +82,6 @@ class AccountUpdate(BaseModel):
     balance: Optional[float] = None
     currency: Optional[str] = None
     is_primary: Optional[bool] = None
-
 
 
 # ================= BILLS =================
@@ -100,8 +103,6 @@ class BillUpdate(BaseModel):
 
 # ================= TRANSACTIONS =================
 
-from datetime import datetime
-from typing import Optional
 
 class TransactionCreate(BaseModel):
     account_id: int
@@ -132,14 +133,10 @@ class TransactionOut(BaseModel):
     txn_date: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ================= BUDGETS =================
-
-from typing import Optional
-from datetime import datetime
-
 
 
 # ================= BUDGETS =================
@@ -163,6 +160,75 @@ class BudgetOut(BaseModel):
     spent_amount: float
     month: int
     year: int
+
+    class Config:
+        from_attributes = True
+
+# ================= REWARDS =================
+
+
+class RewardCreate(BaseModel):
+    user_id: int
+    program_name: str
+    points_balance: int = 0
+
+
+class RewardUpdate(BaseModel):
+    program_name: Optional[str] = None
+    points_balance: Optional[int] = None
+
+
+class RewardResponse(BaseModel):
+    id: int
+    user_id: int
+    program_name: str
+    points_balance: int
+    last_updated: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ================= ALERTS =================
+
+class AlertCreate(BaseModel):
+    user_id: int
+    type: str
+    message: str
+
+
+class AlertUpdate(BaseModel):
+    type: Optional[str] = None
+    message: Optional[str] = None
+
+
+class AlertResponse(BaseModel):
+    id: int
+    user_id: int
+    type: str
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ================= ADMIN LOGS =================
+
+class AdminLogCreate(BaseModel):
+    admin_id: int
+    action: str
+    target_type: str
+    target_id: int
+
+
+class AdminLogResponse(BaseModel):
+    id: int
+    admin_id: int
+    action: str
+    target_type: str
+    target_id: int
+    timestamp: datetime
 
     class Config:
         from_attributes = True
