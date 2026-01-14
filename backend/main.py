@@ -1,15 +1,19 @@
 # main.py
+from dotenv import load_dotenv
+
+# -------------------------------------------------
+# LOAD ENV FIRST (CRITICAL - MUST BE BEFORE ANY IMPORTS)
+# -------------------------------------------------
+load_dotenv()
+
+# -------------------------------------------------
+# NOW IMPORT MODULES THAT DEPEND ON ENV VARS
+# -------------------------------------------------
 from routes import accounts, transactions, bills, budgets, rewards, alerts, admin_logs
 from auth import router as auth_router
 import models
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-
-# -------------------------------------------------
-# LOAD ENV FIRST (CRITICAL)
-# -------------------------------------------------
-load_dotenv()
 
 # -------------------------------------------------
 # IMPORT MODELS (REGISTER TABLES)
