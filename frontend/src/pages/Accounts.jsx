@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "../api";
 import Modal from "../components/Modal";
+import LoadingOverlay from "../components/LoadingOverlay";
 import { toast } from "react-toastify";
 
 export default function Accounts() {
@@ -155,7 +156,7 @@ export default function Accounts() {
     )
     : recentTransactions;
 
-  if (loading) return <p>Loading accounts...</p>;
+  if (loading) return <LoadingOverlay text="Loading accounts..." />;
 
   return (
     <>
@@ -172,8 +173,7 @@ export default function Accounts() {
         {accounts.map((a) => (
           <div
             key={a.id}
-            className={`glass-card ${selectedAccount?.id === a.id ? "active-card" : ""
-              }`}
+            className={`glass-card account-card ${selectedAccount?.id === a.id ? "active-card" : ""}`}
             onClick={() =>
               setSelectedAccount(
                 selectedAccount?.id === a.id ? null : a
@@ -181,12 +181,16 @@ export default function Accounts() {
             }
           >
             <h3>{a.bank_name}</h3>
-            <p>{a.account_type}</p>
+            {/* account type badge will be positioned top-right via CSS */}
+            <div className="account-type-badge">{a.account_type}</div>
 
-            <p>
-              {visibleAccountId === a.id
-                ? a.masked_account
-                : maskAccountNumber(a.masked_account)}
+            <div className="account-number-row">
+              <div className="account-number-text">
+                {visibleAccountId === a.id
+                  ? a.masked_account
+                  : maskAccountNumber(a.masked_account)}
+              </div>
+
               <button
                 className="eye-btn"
                 onClick={(e) => {
@@ -195,10 +199,24 @@ export default function Accounts() {
                     visibleAccountId === a.id ? null : a.id
                   );
                 }}
+                aria-label={visibleAccountId === a.id ? "Hide account number" : "Show account number"}
               >
-                {visibleAccountId === a.id ? "🙈" : "👁️"}
+                {visibleAccountId === a.id ? (
+                  /* eye-off / closed eye icon (outlined white) - Heroicons-style */
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" stroke="#fff" fill="none">
+                    <path d="M3.98 8.223A10.97 10.97 0 011.708 12C3.439 15.89 7.709 19 12 19c1.03 0 2.02-.135 2.94-.39" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    <path d="M14.12 9.88A3 3 0 109.88 14.12" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    <path d="M1 1l22 22" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
+                ) : (
+                  /* eye / open eye icon (outlined white) - Heroicons-style */
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" stroke="#fff" fill="none">
+                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    <circle cx="12" cy="12" r="3" stroke="#fff" strokeWidth="2" fill="none" />
+                  </svg>
+                )}
               </button>
-            </p>
+            </div>
 
             <p>₹ {a.balance}</p>
 

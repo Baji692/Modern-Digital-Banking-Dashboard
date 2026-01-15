@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "../api";
+import { toast } from "react-toastify";
+import Modal from "../components/Modal";
+import LoadingOverlay from "../components/LoadingOverlay";
 
 export default function Rewards() {
   const [transactions, setTransactions] = useState([]);
@@ -7,66 +10,148 @@ export default function Rewards() {
   const [loading, setLoading] = useState(true);
   const [bills, setBills] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const [activeTab, setActiveTab] = useState("overview"); // "overview", "redemptionHistory", "rules"
+  const [activeTab, setActiveTab] = useState("overview");
+  const [userId, setUserId] = useState(null);
+  const [redemptionHistory, setRedemptionHistory] = useState([]);
+  const [referralStats, setReferralStats] = useState({ friends_referred: 0, bonus_points_earned: 0, referral_code: "" });
+  const [totalRewardPoints, setTotalRewardPoints] = useState(0);
+  const [availablePoints, setAvailablePoints] = useState(0);
+  const [monthlyPoints, setMonthlyPoints] = useState(0);
+  const [rewardValue, setRewardValue] = useState(0);
+  const [redeeming, setRedeeming] = useState(false);
+  const [showRedeemModal, setShowRedeemModal] = useState(false);
+  const [redeemTarget, setRedeemTarget] = useState({ type: null, points: 0 });
+  const [referralEmail, setReferralEmail] = useState("");
+  const [referrals, setReferrals] = useState([]);
 
+  // Get user ID from localStorage
   useEffect(() => {
+    const userData = localStorage.getItem("finbank_user");
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setUserId(user.id);
+      } catch (err) {
+        console.error("Error parsing user data:", err);
+      }
+    }
+  }, []);
+
+  // Load main rewards data
+  useEffect(() => {
+    if (!userId) {
+      console.log("No userId yet");
+      return;
+    }
+
     const loadData = async () => {
       try {
-        const [txnData, billsData, accountsData] = await Promise.all([
-          apiFetch("get", "/transactions/"),
-          apiFetch("get", "/bills/"),
-          apiFetch("get", "/accounts/"),
-        ]);
+        console.log("Loading rewards data for user:", userId);
+
+        // Load each endpoint with better error handling
+        let txnData, billsData, accountsData, rewardsSummary, history, stats;
+
+        try {
+          txnData = await apiFetch("get", `/transactions/`);
+          console.log("✓ Transactions loaded:", txnData);
+        } catch (e) {
+          console.error("✗ Error loading transactions:", e);
+          txnData = [];
+        }
+
+        try {
+          billsData = await apiFetch("get", `/bills/`);
+          console.log("✓ Bills loaded:", billsData);
+        } catch (e) {
+          console.error("✗ Error loading bills:", e);
+          billsData = [];
+        }
+
+        try {
+          accountsData = await apiFetch("get", `/accounts/`);
+          console.log("✓ Accounts loaded:", accountsData);
+        } catch (e) {
+          console.error("✗ Error loading accounts:", e);
+          accountsData = [];
+        }
+
+        try {
+          rewardsSummary = await apiFetch("get", `/rewards/summary/${userId}`);
+          console.log("✓ Rewards summary loaded:", rewardsSummary);
+        } catch (e) {
+          console.error("✗ Error loading rewards summary:", e);
+          rewardsSummary = null;
+        }
+
+        try {
+          history = await apiFetch("get", `/rewards/redemption-history`);
+          console.log("✓ Redemption history loaded:", history);
+        } catch (e) {
+          console.error("✗ Error loading redemption history:", e);
+          toast.warning(`⚠ Could not load redemption history: ${e.message}`);
+          history = [];
+        }
+
+        try {
+          stats = await apiFetch("get", `/rewards/referral/stats`);
+          console.log("✓ Referral stats loaded:", stats);
+        } catch (e) {
+          console.error("✗ Error loading referral stats:", e);
+          stats = null;
+        }
+
+        try {
+          const listRes = await apiFetch("get", `/rewards/referral/list`);
+          console.log("✓ Referral list loaded:", listRes);
+          if (listRes && Array.isArray(listRes.referrals)) {
+            setReferrals(listRes.referrals);
+          }
+        } catch (e) {
+          console.error("✗ Error loading referral list:", e);
+        }
+
+        console.log("=== FINAL DATA ===");
+        console.log("Transactions:", txnData);
+        console.log("Rewards Summary:", rewardsSummary);
+        console.log("History:", history);
+        console.log("Stats:", stats);
+
         setTransactions(txnData || []);
         setBills(billsData || []);
         setAccounts(accountsData || []);
-        calculateRewards(txnData || []);
+
+        // Use rewards data from backend
+        if (rewardsSummary && rewardsSummary.breakdown) {
+          console.log("✓ Setting reward breakdown:", rewardsSummary.breakdown);
+          setRewardBreakdown(rewardsSummary.breakdown);
+          // Prefer available_points if backend provides it
+          setAvailablePoints(rewardsSummary.available_points ?? 0);
+          setTotalRewardPoints(rewardsSummary.total_points || 0);
+          setRewardValue(rewardsSummary.reward_value_inr || 0);
+          setMonthlyPoints(rewardsSummary.monthly_points || 0);
+        } else {
+          console.warn("⚠ No rewards summary or breakdown:", rewardsSummary);
+        }
+
+        // Load redemption history
+        if (Array.isArray(history)) {
+          setRedemptionHistory(history);
+        }
+
+        // Load referral stats
+        if (stats) {
+          setReferralStats(stats);
+        }
       } catch (err) {
-        console.error("Error loading data:", err);
+        console.error("❌ Error loading data:", err);
+        toast.error(`Error loading rewards: ${err.message}`);
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, []);
-
-  const calculateRewards = (txns) => {
-    const breakdown = {
-      shopping: 0,
-      dining: 0,
-      utilities: 0,
-      groceries: 0,
-      other: 0,
-    };
-
-    txns.forEach((t) => {
-      if (t.txn_type === "debit") {
-        const amount = Number(t.amount);
-        const category = (t.category || "").toLowerCase();
-
-        if (category.includes("shopping") || category.includes("retail")) {
-          breakdown.shopping += Math.floor(amount * 0.02); // 2% for shopping
-        } else if (category.includes("dining") || category.includes("food")) {
-          breakdown.dining += Math.floor(amount * 0.03); // 3% for dining
-        } else if (category.includes("utilities")) {
-          breakdown.utilities += Math.floor(amount * 0.01); // 1% for utilities
-        } else if (category.includes("groceries")) {
-          breakdown.groceries += Math.floor(amount * 0.015); // 1.5% for groceries
-        } else {
-          breakdown.other += Math.floor(amount * 0.01); // 1% for others
-        }
-      }
-    });
-
-    setRewardBreakdown(breakdown);
-  };
-
-  const totalRewardPoints = Object.values(rewardBreakdown).reduce(
-    (a, b) => a + b,
-    0
-  );
-  const rewardValue = Math.round(totalRewardPoints / 100); // 1 point = ₹1
+  }, [userId]);
 
   const rewardTiers = [
     {
@@ -113,20 +198,95 @@ export default function Rewards() {
   const totalBillsAmount = upcomingBills.reduce((sum, b) => sum + Number(b.amount_due), 0);
   const totalAccountBalance = accounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
 
-  // Mock redemption history data
-  const redemptionHistory = [
-    { id: 1, type: "Cashback", amount: 500, date: "2025-12-15", status: "Completed", pointsUsed: 50000 },
-    { id: 2, type: "Gift Card", amount: 1000, date: "2025-12-10", status: "Completed", pointsUsed: 100000, partner: "Amazon" },
-    { id: 3, type: "Travel", amount: 2500, date: "2025-11-28", status: "Completed", pointsUsed: 250000, partner: "GoIbibo" },
-    { id: 4, type: "Donation", amount: 1000, date: "2025-11-20", status: "Completed", pointsUsed: 100000, partner: "GiveIndia" },
-  ];
-
   // Points expiration simulation
   const pointsExpiringIn = Math.max(0, 5000 - totalRewardPoints); // Points expiring in 6 months if not used
   const expirationDate = new Date();
   expirationDate.setMonth(expirationDate.getMonth() + 6);
 
-  if (loading) return <p style={{ color: "#ffffff" }}>Loading rewards...</p>;
+  // Handle redeem points
+  const handleRedeem = async (redeemType, minPoints) => {
+    // Use availablePoints for redemption eligibility when present
+    const have = availablePoints || totalRewardPoints;
+    if (have < minPoints) {
+      toast.warning(`You need ${minPoints} points to redeem this. You have ${have} available points.`);
+      return;
+    }
+
+    // Open in-screen confirmation modal instead of browser confirm
+    setRedeemTarget({ type: redeemType, points: minPoints });
+    setShowRedeemModal(true);
+    return;
+  };
+
+  // Confirm redemption from modal
+  const confirmRedeem = async () => {
+    const { type, points } = redeemTarget;
+    setShowRedeemModal(false);
+    setRedeeming(true);
+    try {
+      const result = await apiFetch("post", "/rewards/redeem", {
+        redemption_type: type,
+        points_to_use: points,
+        partner: null,
+      });
+
+      if (result) {
+        toast.success(`Successfully redeemed ${points} points! Check your history for details.`);
+        // Reload history
+        const history = await apiFetch("get", "/rewards/redemption-history");
+        if (Array.isArray(history)) {
+          setRedemptionHistory(history);
+        }
+        // Reload points
+        const rewardsSummary = await apiFetch("get", `/rewards/summary/${userId}`);
+        if (rewardsSummary && rewardsSummary.breakdown) {
+          setRewardBreakdown(rewardsSummary.breakdown);
+          setAvailablePoints(rewardsSummary.available_points ?? 0);
+          setTotalRewardPoints(rewardsSummary.total_points || 0);
+        }
+      }
+    } catch (err) {
+      toast.error(`Error: ${err.message}`);
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
+  // Handle referral
+  const handleReferral = async () => {
+    if (!referralEmail.trim()) {
+      toast.warning("Please enter an email address");
+      return;
+    }
+
+    try {
+      const result = await apiFetch("post", "/rewards/referral/create", {
+        referred_email: referralEmail
+      });
+
+      if (result) {
+        toast.success(`Referral sent! They will receive a bonus when they sign up.`);
+        setReferralEmail("");
+        // Reload stats
+        const stats = await apiFetch("get", "/rewards/referral/stats");
+        if (stats) {
+          setReferralStats(stats);
+        }
+      }
+    } catch (err) {
+      toast.error(`Error: ${err.message}`);
+    }
+  };
+
+  // Copy referral code
+  const copyReferralCode = () => {
+    if (referralStats.referral_code) {
+      navigator.clipboard.writeText(referralStats.referral_code);
+      toast.success("Referral code copied to clipboard!");
+    }
+  };
+
+  if (loading) return <LoadingOverlay text="Loading rewards..." />;
 
   return (
     <>
@@ -166,8 +326,8 @@ export default function Rewards() {
                 <span className="reward-hero-label">Total Rewards</span>
                 <span className="reward-hero-icon">⭐</span>
               </div>
-              <div className="reward-hero-value">{totalRewardPoints.toLocaleString()}</div>
-              <div className="reward-hero-sub">≈ ₹{rewardValue.toLocaleString()} cash value</div>
+              <div className="reward-hero-value">{(availablePoints || totalRewardPoints).toLocaleString()}</div>
+              <div className="reward-hero-sub">Total: {totalRewardPoints.toLocaleString()} pts • ≈ ₹{rewardValue.toLocaleString()} cash value</div>
               <div className="reward-hero-meter">
                 <div className="meter-fill" style={{ width: Math.min((totalRewardPoints / 5000) * 100, 100) + '%' }}></div>
               </div>
@@ -194,11 +354,9 @@ export default function Rewards() {
                 <span className="reward-hero-label">This Month</span>
                 <span className="reward-hero-icon">📈</span>
               </div>
-              <div className="reward-hero-value">
-                {Object.values(rewardBreakdown).reduce((a, b) => a + b, 0)}
-              </div>
+              <div className="reward-hero-value">{(monthlyPoints || 0).toLocaleString()}</div>
               <div className="reward-hero-sub">Based on {transactions.filter(t => t.txn_type === "debit").length} transactions</div>
-              <div className="reward-hero-bottom">Avg: {transactions.length > 0 ? Math.round(Object.values(rewardBreakdown).reduce((a, b) => a + b, 0) / transactions.filter(t => t.txn_type === "debit").length * 10) / 10 : 0} pts per transaction</div>
+              <div className="reward-hero-bottom">Avg: {transactions.length > 0 ? Math.round((monthlyPoints || 0) / transactions.filter(t => t.txn_type === "debit").length * 10) / 10 : 0} pts per transaction</div>
             </div>
 
             <div className="glass-card reward-hero-card">
@@ -211,6 +369,17 @@ export default function Rewards() {
               <div className="reward-hero-bottom">Cashback, Cards, Travel & more</div>
             </div>
           </div>
+
+          {/* Redeem confirmation modal */}
+          {showRedeemModal && (
+            <Modal title="Confirm Redemption" onClose={() => setShowRedeemModal(false)}>
+              <p>Redeem {redeemTarget.points} points for {redeemTarget.type}?</p>
+              <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+                <button className="redeem-btn-pro active" onClick={confirmRedeem} disabled={redeeming}>{redeeming ? 'Processing...' : 'OK'}</button>
+                <button className="redeem-btn-pro" onClick={() => setShowRedeemModal(false)} disabled={redeeming}>Cancel</button>
+              </div>
+            </Modal>
+          )}
 
           {/* Points Expiration Warning */}
           {pointsExpiringIn < 1000 && (
@@ -396,7 +565,8 @@ export default function Rewards() {
                       color: "#ef4444"
                     },
                   ].map((option, i) => {
-                    const canRedeem = totalRewardPoints >= option.minPoints;
+                    const have = availablePoints || totalRewardPoints;
+                    const canRedeem = have >= option.minPoints;
                     return (
                       <div key={i} className={`glass-card redemption-card-pro ${!canRedeem ? 'locked' : ''}`}>
                         <div className="redemption-header">
@@ -410,9 +580,10 @@ export default function Rewards() {
                         </div>
                         <button
                           className={`redeem-btn-pro ${canRedeem ? 'active' : ''}`}
-                          disabled={!canRedeem}
+                          disabled={!canRedeem || redeeming}
+                          onClick={() => handleRedeem(option.name, option.minPoints)}
                         >
-                          {canRedeem ? `Redeem Now` : `Locked`}
+                          {redeeming ? `Processing...` : canRedeem ? `Redeem Now` : `Locked`}
                         </button>
                       </div>
                     );
@@ -480,19 +651,55 @@ export default function Rewards() {
                 <div className="referral-code-box">
                   <label>Your Referral Code</label>
                   <div className="referral-code-display">
-                    <code>BANK2025{Math.random().toString(36).substr(2, 5).toUpperCase()}</code>
-                    <button className="copy-btn">Copy</button>
+                    <code>{referralStats?.referral_code || "Loading..."}</code>
+                    <button className="copy-btn" onClick={copyReferralCode} disabled={!referralStats?.referral_code}>Copy</button>
                   </div>
                 </div>
                 <div className="referral-stats">
                   <div className="referral-stat">
                     <span className="referral-stat-label">Friends Referred</span>
-                    <span className="referral-stat-value">3</span>
+                    <span className="referral-stat-value">{referralStats?.friends_referred || 0}</span>
                   </div>
                   <div className="referral-stat">
                     <span className="referral-stat-label">Bonus Points Earned</span>
-                    <span className="referral-stat-value">1,500</span>
+                    <span className="referral-stat-value">{(referralStats?.bonus_points_earned || 0).toLocaleString()}</span>
                   </div>
+                </div>
+                <div style={{ marginTop: "16px" }}>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input
+                      type="email"
+                      placeholder="Friend's email address"
+                      value={referralEmail}
+                      onChange={(e) => setReferralEmail(e.target.value)}
+                      style={{ flex: 1, padding: "10px", borderRadius: "6px", border: "1px solid #333", background: "#1a1f2e", color: "#fff" }}
+                    />
+                    <button
+                      onClick={handleReferral}
+                      disabled={!referralEmail.trim() || redeeming}
+                      style={{ padding: "10px 16px", background: "#10b981", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
+                    >
+                      Send Invite
+                    </button>
+                  </div>
+                </div>
+                {/* Referred friends list */}
+                <div style={{ marginTop: 16 }}>
+                  <h4 style={{ margin: '8px 0 6px', color: '#fff' }}>Referred Friends</h4>
+                  {referrals.length === 0 ? (
+                    <div style={{ color: 'rgba(255,255,255,0.7)' }}>No referrals yet.</div>
+                  ) : (
+                    <div className="referral-list">
+                      {referrals.map((f) => (
+                        <div key={f.id} className="referral-list-item">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                            <div style={{ color: '#fff' }}>{f.referred_name || f.referred_email}</div>
+                            <div style={{ color: 'rgba(255,255,255,0.6)' }}>{f.status}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

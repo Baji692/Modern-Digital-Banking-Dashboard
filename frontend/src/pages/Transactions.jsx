@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "../api";
 import Modal from "../components/Modal";
+import LoadingOverlay from "../components/LoadingOverlay";
 import { toast } from "react-toastify";
 
 const CATEGORY_OPTIONS = [
@@ -128,7 +129,7 @@ export default function Transactions() {
         return true;
     });
 
-    if (loading) return <p>Loading transactions...</p>;
+    if (loading) return <LoadingOverlay text="Loading transactions..." />;
 
     return (
         <>

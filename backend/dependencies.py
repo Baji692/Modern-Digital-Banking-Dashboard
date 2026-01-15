@@ -9,8 +9,15 @@ from models import User
 
 security = HTTPBearer()
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+
+def get_jwt_settings():
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    algorithm = os.getenv("JWT_ALGORITHM", "HS256")
+
+    if not secret_key:
+        raise RuntimeError("JWT_SECRET_KEY is not set in .env")
+
+    return secret_key, algorithm
 
 
 def get_db():
@@ -26,6 +33,7 @@ def get_current_user(
     db: Session = Depends(get_db),
 ):
     token = credentials.credentials
+    SECRET_KEY, ALGORITHM = get_jwt_settings()
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

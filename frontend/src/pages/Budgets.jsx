@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api";
 import Modal from "../components/Modal";
+import LoadingOverlay from "../components/LoadingOverlay";
 import { toast } from "react-toastify";
 
 const CATEGORY_OPTIONS = [
@@ -180,7 +181,7 @@ export default function Budgets() {
         </div>
       </div>
 
-      {loading && <p style={{ opacity: 0.6 }}>Loading budgets...</p>}
+      {loading && <LoadingOverlay text="Loading budgets..." />}
       {!loading && visibleBudgets.length === 0 && (
         <p style={{ opacity: 0.6 }}>
           No budgets for selected month

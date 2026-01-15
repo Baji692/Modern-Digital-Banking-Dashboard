@@ -1113,6 +1113,87 @@ button[disabled] {
   margin-top: 14px;
 }
 
+/* Referral list items styled as small glass boxes */
+.referral-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.referral-list-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.referral-list-item div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.referral-list-item .status {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+/* Accounts page adjustments */
+.account-card {
+  position: relative;
+}
+
+.account-type-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.account-number-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  word-break: keep-all;
+}
+
+.account-number-text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eye-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.eye-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: #fff;
+  fill: none;
+}
+
 .bill-header {
   display: flex;
   justify-content: space-between;

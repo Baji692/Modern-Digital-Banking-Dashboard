@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "../api";
+import LoadingOverlay from "../components/LoadingOverlay";
 
 // Simple Pie Chart Component
 const PieChart = ({ data, colors, size = 150 }) => {
@@ -154,18 +155,48 @@ export default function Insights() {
     email: true,
     push: true,
   });
+  const [userId, setUserId] = useState(null);
+
+  // Get user ID from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem("finbank_user");
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setUserId(user.id);
+      } catch (err) {
+        console.error("Error parsing user data:", err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
+    if (!userId) return;
+
     const loadData = async () => {
       try {
-        const [txnData, billData] = await Promise.all([
+        const [txnData, billData, analyticsData] = await Promise.all([
           apiFetch("get", "/transactions/"),
           apiFetch("get", "/bills/"),
+          apiFetch("get", `/insights/analytics/${userId}`),
         ]);
 
         setTransactions(txnData || []);
         setBills(billData || []);
-        analyzeData(txnData || []);
+
+        // Use analytics data from backend
+        if (analyticsData) {
+          setCategoryData(analyticsData.category_data || {});
+          setMerchantData(analyticsData.merchant_data || {});
+
+          // Convert monthly trend from backend format
+          const trendArray = analyticsData.monthly_trend || [];
+          const trendMap = trendArray.reduce((acc, [month, amount]) => {
+            acc[month] = amount;
+            return acc;
+          }, {});
+          setMonthlyTrend(trendArray);
+        }
       } catch (err) {
         console.error("Error loading insights:", err);
       } finally {
@@ -174,42 +205,7 @@ export default function Insights() {
     };
 
     loadData();
-  }, []);
-
-  const analyzeData = (txns) => {
-    // Category analysis
-    const catMap = {};
-    txns.forEach((t) => {
-      if (t.txn_type === "debit") {
-        const cat = t.category || "Other";
-        catMap[cat] = (catMap[cat] || 0) + Number(t.amount);
-      }
-    });
-    setCategoryData(catMap);
-
-    // Merchant analysis
-    const merMap = {};
-    txns.forEach((t) => {
-      if (t.merchant && t.txn_type === "debit") {
-        merMap[t.merchant] = (merMap[t.merchant] || 0) + Number(t.amount);
-      }
-    });
-    setMerchantData(merMap);
-
-    // Monthly trend
-    const monthMap = {};
-    txns.forEach((t) => {
-      const date = new Date(t.txn_date);
-      const key = `${date.getMonth() + 1}/${date.getFullYear()}`;
-      if (t.txn_type === "debit") {
-        monthMap[key] = (monthMap[key] || 0) + Number(t.amount);
-      }
-    });
-    const sorted = Object.entries(monthMap)
-      .sort((a, b) => new Date(a[0]) - new Date(b[0]))
-      .slice(-6);
-    setMonthlyTrend(sorted);
-  };
+  }, [userId]);
 
 
 
@@ -310,7 +306,7 @@ export default function Insights() {
     setDismissedAlerts([...dismissedAlerts, alertId]);
   };
 
-  if (loading) return <p style={{ color: "#ffffff" }}>Loading insights...</p>;
+  if (loading) return <LoadingOverlay text="Loading insights..." />;
 
   return (
     <>

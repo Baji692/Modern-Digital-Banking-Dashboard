@@ -177,3 +177,38 @@ class AdminLogs(Base):
     target_type = Column(String(100), nullable=False)
     target_id = Column(Integer, nullable=False)
     timestamp = Column(TIMESTAMP, default=func.now())
+
+
+# ================= REDEMPTIONS =================
+
+class Redemptions(Base):
+    __tablename__ = "redemptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # Cashback, Gift Card, Travel, Shopping
+    redemption_type = Column(String(50), nullable=False)
+    points_used = Column(Integer, nullable=False)
+    amount_value = Column(Numeric(12, 2), nullable=False)  # Value in INR
+    partner = Column(String(100), nullable=True)  # Partner name if applicable
+    # Pending, Completed, Cancelled
+    status = Column(String(20), default="Pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+
+# ================= REFERRALS =================
+
+class Referrals(Base):
+    __tablename__ = "referrals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    referrer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    referred_email = Column(String(100), nullable=False)
+    referred_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    referral_code = Column(String(50), unique=True, nullable=False)
+    bonus_points = Column(Integer, default=500)
+    # Pending, Completed, Cancelled
+    status = Column(String(20), default="Pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)

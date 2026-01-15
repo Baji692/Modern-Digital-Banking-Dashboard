@@ -232,3 +232,47 @@ class AdminLogResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ================= REDEMPTIONS =================
+
+class RedemptionCreate(BaseModel):
+    redemption_type: str
+    points_to_use: int
+    partner: Optional[str] = None
+
+
+class RedemptionResponse(BaseModel):
+    id: int
+    user_id: int
+    redemption_type: str
+    points_used: int
+    amount_value: float
+    partner: Optional[str]
+    status: str
+    created_at: datetime
+    completed_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# ================= REFERRALS =================
+
+class ReferralCreate(BaseModel):
+    referred_email: str
+
+
+class ReferralResponse(BaseModel):
+    id: int
+    referrer_id: int
+    referred_email: str
+    referred_user_id: Optional[int]
+    referral_code: str
+    bonus_points: int
+    status: str
+    created_at: datetime
+    completed_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True

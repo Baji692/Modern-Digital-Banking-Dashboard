@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "../api";
 import Modal from "../components/Modal";
+import LoadingOverlay from "../components/LoadingOverlay";
 import { toast } from "react-toastify";
 
 export default function Bills() {
@@ -295,7 +296,7 @@ export default function Bills() {
     return "upcoming";
   };
 
-  if (loading) return <p>Loading bills...</p>;
+  if (loading) return <LoadingOverlay text="Loading bills..." />;
 
   /* ================= SPLITS ================= */
   const paidBills = bills.filter((b) => b.status === "paid");

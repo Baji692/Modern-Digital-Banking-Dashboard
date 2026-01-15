@@ -1,4 +1,9 @@
 # main.py
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
+import models
+from auth import router as auth_router
+from routes import accounts, transactions, bills, budgets, rewards, alerts, admin_logs, insights, exports
 from dotenv import load_dotenv
 
 # -------------------------------------------------
@@ -9,11 +14,6 @@ load_dotenv()
 # -------------------------------------------------
 # NOW IMPORT MODULES THAT DEPEND ON ENV VARS
 # -------------------------------------------------
-from routes import accounts, transactions, bills, budgets, rewards, alerts, admin_logs
-from auth import router as auth_router
-import models
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 # -------------------------------------------------
 # IMPORT MODELS (REGISTER TABLES)
@@ -58,6 +58,8 @@ app.include_router(budgets.router)
 app.include_router(rewards.router)
 app.include_router(alerts.router)
 app.include_router(admin_logs.router)
+app.include_router(insights.router)
+app.include_router(exports.router)
 
 # -------------------------------------------------
 # ROOT CHECK
