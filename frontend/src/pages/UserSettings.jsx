@@ -1186,7 +1186,7 @@ export default function UserSettings({ navigate }) {
                                 <label className="form-label">Verification Code</label>
                                 <input
                                     type="text"
-                                    className="form-input otp-input"
+                                    className="form-input email-otp-input"
                                     placeholder="Enter 6-digit OTP"
                                     value={emailOtp}
                                     onChange={(e) => setEmailOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}

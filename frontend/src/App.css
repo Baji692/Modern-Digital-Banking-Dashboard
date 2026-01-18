@@ -282,11 +282,18 @@ body {
   text-align: center;
   font-size: 18px;
   outline: none;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  background-color: #ffffff;
 }
 
 .otp-input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+}
+
+.otp-input::placeholder {
+  color: #d1d5db;
 }
 
 .otp-helper {

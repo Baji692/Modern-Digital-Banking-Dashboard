@@ -245,6 +245,13 @@
   border: 1px solid #d1d5db;
   text-align: center;
   font-size: 18px;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  background-color: #ffffff;
+}
+
+.otp-input::placeholder {
+  color: #d1d5db;
 }
 
 .otp-info {
