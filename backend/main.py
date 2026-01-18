@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 import models
 from auth import router as auth_router
-from routes import accounts, transactions, bills, budgets, rewards, alerts, admin_logs, insights, exports
+from routes import accounts, transactions, bills, budgets, budgets_enhanced, rewards, alerts, admin_logs, insights, exports, goals
 from dotenv import load_dotenv
 
 # -------------------------------------------------
@@ -55,11 +55,13 @@ app.include_router(accounts.router)
 app.include_router(transactions.router)
 app.include_router(bills.router)
 app.include_router(budgets.router)
+app.include_router(budgets_enhanced.router)
 app.include_router(rewards.router)
 app.include_router(alerts.router)
 app.include_router(admin_logs.router)
 app.include_router(insights.router)
 app.include_router(exports.router)
+app.include_router(goals.router)
 
 # -------------------------------------------------
 # ROOT CHECK

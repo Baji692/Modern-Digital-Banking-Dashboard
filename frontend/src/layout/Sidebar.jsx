@@ -80,6 +80,20 @@ export default function Sidebar({ logout }) {
           >
             📈 Insights
           </button>
+
+          <button
+            className={active === "goals" ? "nav-active" : ""}
+            onClick={() => go("goals")}
+          >
+            🎯 Goals
+          </button>
+
+          <button
+            className={active === "settings" ? "nav-active" : ""}
+            onClick={() => go("settings")}
+          >
+            ⚙️ Settings
+          </button>
         </nav>
       </div>
 

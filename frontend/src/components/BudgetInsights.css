@@ -1,0 +1,170 @@
+/* ================= BUDGET INSIGHTS SUMMARY ================= */
+
+.budget-insights-summary {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.05));
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(10px);
+}
+
+.insights-header {
+    margin-bottom: 16px;
+}
+
+.insights-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.insight-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.insight-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.insight-icon {
+    font-size: 28px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.insight-content {
+    flex: 1;
+}
+
+.insight-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 4px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.insight-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.insight-progress-ring {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+/* ================= ALERTS ================= */
+
+.insights-alert {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #fca5a5;
+}
+
+.insights-alert.overspent-alert {
+    animation: slideInDown 0.3s ease;
+}
+
+.alert-icon {
+    font-size: 16px;
+    min-width: 20px;
+}
+
+.alert-text {
+    flex: 1;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ================= SUMMARY LINE ================= */
+
+.insights-summary-line {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.insights-summary-line p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+    .insights-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .insight-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .insight-icon {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .budget-insights-summary {
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+
+    .insights-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .insights-header h3 {
+        font-size: 14px;
+    }
+}

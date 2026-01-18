@@ -141,6 +141,119 @@ class Budgets(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # New fields for enhanced features
+    # Carry unused budget to next month
+    rollover_enabled = Column(Boolean, default=False)
+    # UI badge when limit hits
+    is_spending_frozen = Column(Boolean, default=False)
+    # For custom visual indicators
+    color_code = Column(String(20), default="default")
+
+
+# ================= BUDGET HISTORY =================
+
+
+class BudgetHistory(Base):
+    __tablename__ = "budget_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    budget_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=False)
+    category = Column(String(50), nullable=False)
+
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
+
+    limit_amount = Column(Numeric(14, 2), nullable=False)
+    spent_amount = Column(Numeric(14, 2), default=0.00)
+    remaining_amount = Column(Numeric(14, 2), default=0.00)
+    usage_percent = Column(Numeric(5, 2), default=0.00)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ================= BUDGET RECOMMENDATIONS =================
+
+
+class BudgetRecommendation(Base):
+    __tablename__ = "budget_recommendations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    category = Column(String(50), nullable=False)
+
+    current_budget = Column(Numeric(14, 2), nullable=True)
+    recommended_budget = Column(Numeric(14, 2), nullable=False)
+    average_spend = Column(Numeric(14, 2), nullable=False)
+
+    confidence_score = Column(Numeric(5, 2), default=0.00)  # 0-100%
+    reasoning = Column(String(500), nullable=True)  # Why this recommendation
+
+    is_applied = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    applied_at = Column(DateTime, nullable=True)
+
+
+# ================= CUSTOM BUDGET CATEGORIES =================
+
+
+class CustomBudgetCategory(Base):
+    __tablename__ = "custom_budget_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+
+    category_name = Column(String(50), nullable=False)
+    icon_emoji = Column(String(10), default="💰")  # Emoji for icon
+    color_hex = Column(String(7), default="#2563eb")  # Color picker value
+
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ================= BUDGET SUBCATEGORIES =================
+
+
+class BudgetSubcategory(Base):
+    __tablename__ = "budget_subcategories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    budget_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=False)
+
+    parent_category = Column(String(50), nullable=False)
+    subcategory_name = Column(String(50), nullable=False)
+
+    limit_amount = Column(Numeric(14, 2), nullable=False)
+    spent_amount = Column(Numeric(14, 2), default=0.00)
+
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ================= BUDGET ALERTS =================
+
+
+class BudgetAlert(Base):
+    __tablename__ = "budget_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    budget_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=False)
+    category = Column(String(50), nullable=False)
+
+    # THRESHOLD_80, THRESHOLD_90, THRESHOLD_100, PREDICTION
+    alert_type = Column(String(20), nullable=False)
+    threshold_reached = Column(Integer, default=0)  # %, 80, 90, 100
+    current_spending = Column(Numeric(14, 2), nullable=False)
+
+    message = Column(String(255), nullable=False)
+    is_read = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 # ================= REWARDS =================
 
 
@@ -195,6 +308,47 @@ class Redemptions(Base):
     status = Column(String(20), default="Pending")
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
+
+
+# ================= USER GOALS =================
+
+class UserGoals(Base):
+    __tablename__ = "user_goals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"),
+                     unique=True, nullable=False)
+    savings_goal = Column(Numeric(5, 2), default=20.0)  # Percentage
+    spending_goal = Column(Numeric(12, 2), default=100000.0)  # Currency amount
+    bills_goal = Column(Numeric(5, 2), default=100.0)  # Percentage
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
+
+# ================= CUSTOM GOALS =================
+
+class CustomGoal(Base):
+    __tablename__ = "custom_goals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # Goal name (e.g., "Vacation Fund")
+    name = Column(String(100), nullable=False)
+    description = Column(String(500), nullable=True)  # Optional description
+    goal_type = Column(String(20), nullable=False)  # "amount" or "percentage"
+    # Target amount or percentage
+    target_value = Column(Numeric(12, 2), nullable=False)
+    current_value = Column(Numeric(12, 2), default=0)  # Current progress
+    # "savings", "spending", "investment", "debt", "other"
+    category = Column(String(50), nullable=False)
+    target_date = Column(Date, nullable=True)  # When to achieve the goal
+    priority = Column(String(20), default="medium")  # "low", "medium", "high"
+    # "active", "completed", "paused"
+    status = Column(String(20), default="active")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
 
 
 # ================= REFERRALS =================

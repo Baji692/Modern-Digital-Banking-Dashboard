@@ -52,6 +52,14 @@ class VerifyRegisterOTP(BaseModel):
     otp: str
 
 
+# ================= USER PROFILE =================
+
+
+class UpdateUserProfile(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
 # schemas.py
 
 
@@ -151,6 +159,9 @@ class BudgetCreate(BaseModel):
 class BudgetUpdate(BaseModel):
     limit_amount: Optional[float] = None
     spent_amount: Optional[float] = None
+    rollover_enabled: Optional[bool] = None
+    is_spending_frozen: Optional[bool] = None
+    color_code: Optional[str] = None
 
 
 class BudgetOut(BaseModel):
@@ -160,6 +171,125 @@ class BudgetOut(BaseModel):
     spent_amount: float
     month: int
     year: int
+    rollover_enabled: Optional[bool] = False
+    is_spending_frozen: Optional[bool] = False
+    color_code: Optional[str] = "default"
+
+    class Config:
+        from_attributes = True
+
+
+# ================= BUDGET HISTORY =================
+
+
+class BudgetHistoryCreate(BaseModel):
+    budget_id: int
+    category: str
+    month: int
+    year: int
+    limit_amount: float
+    spent_amount: float
+    remaining_amount: float
+    usage_percent: float
+
+
+class BudgetHistoryOut(BaseModel):
+    id: int
+    budget_id: int
+    category: str
+    month: int
+    year: int
+    limit_amount: float
+    spent_amount: float
+    remaining_amount: float
+    usage_percent: float
+
+    class Config:
+        from_attributes = True
+
+
+# ================= BUDGET RECOMMENDATIONS =================
+
+
+class BudgetRecommendationCreate(BaseModel):
+    category: str
+    current_budget: Optional[float] = None
+    recommended_budget: float
+    average_spend: float
+    confidence_score: float = 0.0
+    reasoning: Optional[str] = None
+
+
+class BudgetRecommendationOut(BaseModel):
+    id: int
+    category: str
+    current_budget: Optional[float]
+    recommended_budget: float
+    average_spend: float
+    confidence_score: float
+    reasoning: Optional[str]
+    is_applied: bool
+
+    class Config:
+        from_attributes = True
+
+
+# ================= CUSTOM BUDGET CATEGORIES =================
+
+
+class CustomBudgetCategoryCreate(BaseModel):
+    category_name: str
+    icon_emoji: str = "💰"
+    color_hex: str = "#2563eb"
+
+
+class CustomBudgetCategoryOut(BaseModel):
+    id: int
+    category_name: str
+    icon_emoji: str
+    color_hex: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+# ================= BUDGET SUBCATEGORIES =================
+
+
+class BudgetSubcategoryCreate(BaseModel):
+    parent_category: str
+    subcategory_name: str
+    limit_amount: float
+    month: int
+    year: int
+
+
+class BudgetSubcategoryOut(BaseModel):
+    id: int
+    parent_category: str
+    subcategory_name: str
+    limit_amount: float
+    spent_amount: float
+    month: int
+    year: int
+
+    class Config:
+        from_attributes = True
+
+
+# ================= BUDGET ALERTS =================
+
+
+class BudgetAlertOut(BaseModel):
+    id: int
+    budget_id: int
+    category: str
+    alert_type: str
+    threshold_reached: int
+    current_spending: float
+    message: str
+    is_read: bool
 
     class Config:
         from_attributes = True
@@ -276,3 +406,80 @@ class ReferralResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ================= USER GOALS =================
+
+
+class UserGoalsUpdate(BaseModel):
+    savings_goal: Optional[float] = None
+    spending_goal: Optional[float] = None
+    bills_goal: Optional[float] = None
+
+
+class UserGoalsResponse(BaseModel):
+    id: int
+    user_id: int
+    savings_goal: float
+    spending_goal: float
+    bills_goal: float
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ================= CUSTOM GOALS =================
+
+
+class CustomGoalCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    goal_type: str  # "amount" or "percentage"
+    target_value: float
+    current_value: Optional[float] = 0
+    category: str  # "savings", "spending", "investment", "debt", "other"
+    target_date: Optional[date] = None
+    priority: Optional[str] = "medium"  # "low", "medium", "high"
+
+
+class CustomGoalUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    target_value: Optional[float] = None
+    current_value: Optional[float] = None
+    category: Optional[str] = None
+    target_date: Optional[date] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+
+
+class CustomGoalResponse(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    description: Optional[str]
+    goal_type: str
+    target_value: float
+    current_value: float
+    category: str
+    target_date: Optional[date]
+    priority: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ================= EMAIL CHANGE OTP =================
+
+class SendEmailOTP(BaseModel):
+    email: EmailStr
+
+
+class VerifyEmailOTP(BaseModel):
+    user_id: int
+    new_email: EmailStr
+    name: Optional[str] = None
+    otp: str = Field(..., min_length=6, max_length=6)

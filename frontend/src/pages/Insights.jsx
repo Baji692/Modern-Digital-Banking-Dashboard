@@ -1,114 +1,73 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "../api";
 import LoadingOverlay from "../components/LoadingOverlay";
+import GoalsEditModal from "../components/GoalsEditModal";
+import { toast } from "react-toastify";
 
-// Simple Pie Chart Component
-const PieChart = ({ data, colors, size = 150 }) => {
-  const total = Object.values(data).reduce((a, b) => a + b, 0);
-  if (total === 0) return <p style={{ color: "rgba(255,255,255,0.5)" }}>No data</p>;
+// Interactive Tooltip Component (can be used for advanced tooltips)
+// const Tooltip = ({ visible, x, y, content }) => {
+//   if (!visible) return null;
+//   return (
+//     <div
+//       className="chart-tooltip"
+//       style={{
+//         position: "fixed",
+//         left: `${x}px`,
+//         top: `${y}px`,
+//         pointerEvents: "none",
+//         zIndex: 1000,
+//       }}
+//     >
+//       {content}
+//     </div>
+//   );
+// };
 
-  let currentAngle = 0;
-  const slices = Object.entries(data).map(([label, value], i) => {
-    const sliceAngle = (value / total) * 360;
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + sliceAngle;
-    currentAngle = endAngle;
-
-    const startRad = (startAngle - 90) * (Math.PI / 180);
-    const endRad = (endAngle - 90) * (Math.PI / 180);
-
-    const x1 = size / 2 + (size / 2) * Math.cos(startRad);
-    const y1 = size / 2 + (size / 2) * Math.sin(startRad);
-    const x2 = size / 2 + (size / 2) * Math.cos(endRad);
-    const y2 = size / 2 + (size / 2) * Math.sin(endRad);
-
-    const largeArc = sliceAngle > 180 ? 1 : 0;
-    const path = `M ${size / 2} ${size / 2} L ${x1} ${y1} A ${size / 2} ${size / 2} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-
-    return (
-      <path
-        key={i}
-        d={path}
-        fill={colors[i % colors.length]}
-        stroke="rgba(15, 23, 42, 0.8)"
-        strokeWidth="2"
-      />
-    );
-  });
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.2))" }}>
-      {slices}
-      <circle cx={size / 2} cy={size / 2} r={size / 3} fill="rgba(15, 23, 42, 0.8)" />
-    </svg>
-  );
-};
-
-// Donut Chart for Category Distribution
-const CategoryDonut = ({ categoryData, maxValue }) => {
-  const pieColors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
-  const sortedData = Object.entries(categoryData)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .reduce((obj, [key, val]) => ({ ...obj, [key]: val }), {});
+// Interactive Bar Chart with Hover Effects
+const InteractiveBarChart = ({ data, maxValue, onHover, hoveredItem }) => {
+  const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+  const emojis = {
+    Shopping: "🛍️",
+    Dining: "🍽️",
+    Groceries: "🛒",
+    Entertainment: "🎬",
+    Transport: "🚗",
+    Utilities: "⚡",
+    Other: "📌",
+  };
 
   return (
-    <div style={{ display: "flex", gap: "20px", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-      <div>
-        <PieChart data={sortedData} colors={pieColors} size={200} />
-      </div>
-      <div style={{ flex: 1 }}>
-        {Object.entries(sortedData).map(([cat, amount], i) => (
-          <div key={i} style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
-            <div
-              style={{
-                width: "12px",
-                height: "12px",
-                borderRadius: "2px",
-                background: pieColors[i % pieColors.length],
-              }}
-            ></div>
-            <span style={{ color: "#ffffff", fontSize: "13px", flex: 1 }}>{cat}</span>
-            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "12px" }}>
-              ₹{amount.toFixed(0)} ({((amount / Object.values(sortedData).reduce((a, b) => a + b, 0)) * 100).toFixed(1)}%)
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Category Comparison Chart
-const CategoryComparison = ({ categoryData }) => {
-  const sorted = Object.entries(categoryData)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-  const maxVal = Math.max(...sorted.map(s => s[1]), 1);
-
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", height: "200px", gap: "10px", padding: "20px 0" }}>
-      {sorted.map(([cat, amount], i) => {
-        const height = (amount / maxVal) * 150;
-        const emojis = { "Shopping": "🛍️", "Dining": "🍽️", "Groceries": "🛒", "Entertainment": "🎬", "Transport": "🚗", "Utilities": "⚡", "Other": "📌" };
+    <div className="interactive-bar-chart">
+      {data.map(([category, amount], i) => {
+        const percentage = (amount / maxValue) * 100;
+        const isHovered = hoveredItem === category;
 
         return (
-          <div key={i} style={{ textAlign: "center", flex: 1 }}>
-            <div
-              style={{
-                height: `${height}px`,
-                background: `linear-gradient(180deg, #3b82f6, #1e40af)`,
-                borderRadius: "8px 8px 0 0",
-                margin: "0 auto",
-                width: "60px",
-                transition: "all 0.3s",
-                cursor: "pointer",
-              }}
-              title={`₹${amount.toFixed(0)}`}
-            ></div>
-            <div style={{ color: "#ffffff", fontSize: "20px", marginTop: "8px" }}>{emojis[cat] || "📊"}</div>
-            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "11px", marginTop: "4px" }}>{cat.slice(0, 8)}</div>
-            <div style={{ color: "#3b82f6", fontSize: "11px", fontWeight: "600" }}>₹{(amount / 1000).toFixed(1)}K</div>
+          <div
+            key={i}
+            className={`bar-item ${isHovered ? "hovered" : ""}`}
+            onMouseEnter={() => onHover(category)}
+            onMouseLeave={() => onHover(null)}
+          >
+            <div className="bar-header">
+              <div className="cat-info">
+                <span className="cat-emoji">{emojis[category] || "📊"}</span>
+                <span className="cat-name">{category}</span>
+              </div>
+              <div className="cat-stats">
+                <span className="cat-amount">₹{amount.toFixed(0)}</span>
+                <span className="cat-percent">{percentage.toFixed(1)}%</span>
+              </div>
+            </div>
+            <div className="bar-bg">
+              <div
+                className="bar-fill"
+                style={{
+                  width: `${percentage}%`,
+                  backgroundColor: colors[i % colors.length],
+                }}
+              />
+            </div>
           </div>
         );
       })}
@@ -116,27 +75,109 @@ const CategoryComparison = ({ categoryData }) => {
   );
 };
 
-// Spending Gauge
-const SpendingGauge = ({ current, budget, label }) => {
+// KPI Card Component
+const KPICard = ({ title, value, subtext, trend, icon, onClick, pendingCount }) => {
+  return (
+    <div className="kpi-card" onClick={onClick} style={{ cursor: onClick ? "pointer" : "default" }}>
+      <div className="kpi-header">
+        <span className="kpi-icon">{icon}</span>
+        <span className="kpi-title">{title}</span>
+        {pendingCount > 0 && (
+          <span className="pending-badge">{pendingCount}</span>
+        )}
+        {trend !== undefined && trend !== 0 && (
+          <span className={`trend-indicator ${trend > 0 ? "up" : "down"}`}>
+            {trend > 0 ? "↑" : "↓"} {Math.abs(trend)}%
+          </span>
+        )}
+      </div>
+      <div className="kpi-value">{value}</div>
+      {subtext && <div className="kpi-subtext">{subtext}</div>}
+    </div>
+  );
+};
+
+// Professional Spending Gauge
+const ProfessionalGauge = ({ current, budget, label, color = "#3b82f6", formatType = "currency", onEditGoal }) => {
   const currentNum = Number(current) || 0;
   const budgetNum = Number(budget) || 1;
-  const percentage = Math.min((currentNum / budgetNum) * 100, 100);
-  const bgColor = percentage > 80 ? "#ef4444" : percentage > 50 ? "#f59e0b" : "#10b981";
+  const percentage = formatType === "percentage" ? Math.min((currentNum / budgetNum) * 100, 100) : Math.min((currentNum / budgetNum) * 100, 100);
+
+  let gaugeColor = "#10b981"; // Green
+  if (formatType === "percentage") {
+    // For savings rate and percentage goals: higher is better
+    if (percentage < 50) gaugeColor = "#ef4444"; // Red - below 50% of goal
+    else if (percentage < 100) gaugeColor = "#f59e0b"; // Amber - below goal
+    // else gaugeColor stays green - exceeding goal
+  } else {
+    // For spending and currency: lower is better
+    if (percentage > 80) gaugeColor = "#ef4444"; // Red
+    else if (percentage > 50) gaugeColor = "#f59e0b"; // Amber
+  }
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ position: "relative", width: "120px", height: "120px", margin: "0 auto 10px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg width="120" height="120" style={{ position: "absolute" }}>
-          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
-          <circle cx="60" cy="60" r="50" fill="none" stroke={bgColor} strokeWidth="8" strokeDasharray={`${(percentage / 100) * 314} 314`} strokeLinecap="round" style={{ transform: "rotate(-90deg)", transformOrigin: "60px 60px" }} />
-        </svg>
-        <div style={{ textAlign: "center", zIndex: 1 }}>
-          <div style={{ color: "#ffffff", fontSize: "20px", fontWeight: "700" }}>{percentage.toFixed(0)}%</div>
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "10px" }}>Used</div>
+    <div className="gauge-card">
+      <div className="gauge-header">
+        <h4>{label}</h4>
+        <div className="gauge-header-actions">
+          <span className="gauge-percentage">{percentage.toFixed(0)}%</span>
+          <button className="gauge-edit-btn" onClick={onEditGoal} title="Edit goal">
+            ✏️
+          </button>
         </div>
       </div>
-      <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "12px" }}>{label}</div>
-      <div style={{ color: "#ffffff", fontSize: "11px", marginTop: "4px" }}>₹{currentNum.toFixed(0)}/₹{budgetNum.toFixed(0)}</div>
+      <div className="gauge-wrapper">
+        <div className="stat stat-start">
+          <span className="label">Current</span>
+          <span className="value">{formatType === "percentage" ? `${currentNum.toFixed(1)}%` : `₹${currentNum.toFixed(0)}`}</span>
+        </div>
+        <div className="gauge-container">
+          <svg width="100%" height="120" viewBox="0 0 200 120">
+            <defs>
+              <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%">
+                <stop offset="0%" stopColor={gaugeColor} />
+                <stop offset="100%" stopColor={gaugeColor} stopOpacity="0.6" />
+              </linearGradient>
+            </defs>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" strokeLinecap="round" />
+            <path
+              d="M 20 100 A 80 80 0 0 1 180 100"
+              fill="none"
+              stroke="url(#gaugeGradient)"
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={`${(percentage / 100) * 251} 251`}
+            />
+            <circle cx="100" cy="100" r="8" fill={gaugeColor} />
+          </svg>
+        </div>
+        <div className="stat stat-end">
+          <span className="label">Goal</span>
+          <span className="value">{formatType === "percentage" ? `${budgetNum.toFixed(1)}%` : `₹${budgetNum.toFixed(0)}`}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Spending Anomaly Alert
+const AnomalyAlert = ({ title, description, severity, onDismiss }) => {
+  const severityColors = {
+    critical: "#ef4444",
+    warning: "#f59e0b",
+    info: "#3b82f6",
+    success: "#10b981",
+  };
+
+  return (
+    <div className="anomaly-alert" style={{ borderLeft: `4px solid ${severityColors[severity]}` }}>
+      <div className="alert-content">
+        <h4>{title}</h4>
+        <p>{description}</p>
+      </div>
+      <button className="alert-dismiss-btn" onClick={onDismiss}>
+        ✕
+      </button>
     </div>
   );
 };
@@ -148,14 +189,17 @@ export default function Insights() {
   const [merchantData, setMerchantData] = useState({});
   const [monthlyTrend, setMonthlyTrend] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedAlert, setExpandedAlert] = useState(null);
-  const [dismissedAlerts, setDismissedAlerts] = useState([]);
-  const [notificationPreferences, setNotificationPreferences] = useState({
-    sms: true,
-    email: true,
-    push: true,
-  });
   const [userId, setUserId] = useState(null);
+  const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState([]);
+  const [timeRange, setTimeRange] = useState("month"); // month, quarter, year
+  const [userGoals, setUserGoals] = useState({
+    savings_goal: 20,
+    spending_goal: 100000,
+    bills_goal: 100
+  });
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Get user ID from localStorage
   useEffect(() => {
@@ -170,32 +214,30 @@ export default function Insights() {
     }
   }, []);
 
+  // Load data from backend
   useEffect(() => {
     if (!userId) return;
 
     const loadData = async () => {
       try {
-        const [txnData, billData, analyticsData] = await Promise.all([
+        const [txnData, billData, analyticsData, goalsData] = await Promise.all([
           apiFetch("get", "/transactions/"),
           apiFetch("get", "/bills/"),
           apiFetch("get", `/insights/analytics/${userId}`),
+          apiFetch("get", `/goals/summary/${userId}`),
         ]);
 
         setTransactions(txnData || []);
         setBills(billData || []);
 
-        // Use analytics data from backend
         if (analyticsData) {
           setCategoryData(analyticsData.category_data || {});
           setMerchantData(analyticsData.merchant_data || {});
+          setMonthlyTrend(analyticsData.monthly_trend || []);
+        }
 
-          // Convert monthly trend from backend format
-          const trendArray = analyticsData.monthly_trend || [];
-          const trendMap = trendArray.reduce((acc, [month, amount]) => {
-            acc[month] = amount;
-            return acc;
-          }, {});
-          setMonthlyTrend(trendArray);
+        if (goalsData) {
+          setUserGoals(goalsData);
         }
       } catch (err) {
         console.error("Error loading insights:", err);
@@ -207,489 +249,390 @@ export default function Insights() {
     loadData();
   }, [userId]);
 
+  // Check notification preferences
+  const checkInsightsEnabled = () => {
+    const preferences = localStorage.getItem("finbank_notifications");
+    if (preferences) {
+      const prefs = JSON.parse(preferences);
+      return prefs.insightsAnalytics !== false;
+    }
+    return true;
+  };
 
-
+  // Calculate metrics
   const topCategories = Object.entries(categoryData)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+    .slice(0, 8);
 
   const topMerchants = Object.entries(merchantData)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+    .slice(0, 8);
 
   const totalSpending = Object.values(categoryData).reduce((a, b) => a + b, 0);
+  const totalIncome = transactions
+    .filter((t) => t.txn_type === "credit")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
   const paidBills = bills.filter((b) => b.status === "paid").length;
-  const billsPaid = bills.filter((b) => b.status === "paid").reduce(
-    (sum, b) => sum + Number(b.amount_due),
-    0
-  );
-  const savingsRateValue = ((billsPaid / (totalSpending + billsPaid)) * 100) || 0;
+  const pendingBills = bills.filter((b) => b.status !== "paid").length;
+  const totalBills = bills.length;
+  const billsPaid = bills
+    .filter((b) => b.status === "paid")
+    .reduce((sum, b) => sum + Number(b.amount_due), 0);
+  const totalBillsAmount = bills.reduce((sum, b) => sum + Number(b.amount_due), 0);
 
-  const maxCatValue = Math.max(...Object.values(categoryData), 1);
-  const maxTrendValue = Math.max(...monthlyTrend.map((m) => m[1]), 1);
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalSpending) / totalIncome) * 100 : 0;
+  const avgDailySpending = totalSpending / 30; // Approximate
+  const transactionCount = transactions.filter((t) => t.txn_type === "debit").length;
 
-  // Generate alerts based on spending patterns
-  const generateAlerts = () => {
-    const alerts = [];
-    const weekAgoDate = new Date();
-    weekAgoDate.setDate(weekAgoDate.getDate() - 7);
-
-    const thisWeekTxns = transactions.filter(t => new Date(t.txn_date) > weekAgoDate && t.txn_type === "debit");
-    const thisWeekSpending = thisWeekTxns.reduce((sum, t) => sum + Number(t.amount), 0);
-    const lastWeekAvg = totalSpending / 4;
-
-    if (thisWeekSpending > lastWeekAvg * 1.5) {
-      alerts.push({
-        id: "high-spending",
-        type: "warning",
-        icon: "📊",
-        title: "Higher Spending This Week",
-        message: `You've spent ₹${thisWeekSpending.toFixed(0)} this week, 50% above average.`,
-        cta: "Set Budget",
-        channel: "push",
-        timestamp: new Date(),
-        priority: "high",
-      });
-    }
-
-    const upcomingBill = bills.find(b => b.status === "upcoming" && new Date(b.due_date) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
-    if (upcomingBill) {
-      alerts.push({
-        id: "bill-reminder",
-        type: "info",
-        icon: "📋",
-        title: "Bill Payment Due Soon",
-        message: `${upcomingBill.merchant_name} bill of ₹${upcomingBill.amount_due} due ${new Date(upcomingBill.due_date).toLocaleDateString()}.`,
-        cta: "Pay Now",
-        channel: "email",
-        timestamp: new Date(),
-        priority: "medium",
-      });
-    }
-
-    const uniqueMerchants = new Set(transactions.slice(-5).map(t => t.merchant));
-    if (uniqueMerchants.size > 3) {
-      alerts.push({
-        id: "new-merchant",
-        type: "security",
-        icon: "🔒",
-        title: "New Merchant Activity Detected",
-        message: "3+ new merchants detected in last 24 hours. Secure your account if this wasn't you.",
-        cta: "Review Activity",
-        channel: "sms",
-        timestamp: new Date(),
-        priority: "critical",
-      });
-    }
-
-    if (savingsRateValue > 20) {
-      alerts.push({
-        id: "savings-milestone",
-        type: "success",
-        icon: "🎉",
-        title: "Great Savings Progress!",
-        message: `Maintaining ${savingsRateValue.toFixed(1)}% savings rate. Excellent discipline!`,
-        cta: "View Goals",
-        channel: "push",
-        timestamp: new Date(),
-        priority: "low",
-      });
-    }
-
-    return alerts;
+  // Handle goal editing
+  const handleEditGoal = (goalName, goalLabel) => {
+    setEditingGoal({ name: goalName, label: goalLabel });
+    setModalOpen(true);
   };
 
-  const alerts = generateAlerts().filter(a => !dismissedAlerts.includes(a.id));
-  const criticalAlerts = alerts.filter(a => a.priority === "critical");
+  const handleSaveGoal = async (newValue) => {
+    try {
+      const updateData = {
+        [editingGoal.name]: newValue
+      };
 
-  const dismissAlert = (alertId) => {
-    setDismissedAlerts([...dismissedAlerts, alertId]);
+      const response = await apiFetch("put", `/goals/update/${userId}`, updateData);
+
+      if (response) {
+        setUserGoals(response);
+        toast.success(`${editingGoal.label} updated!`);
+      }
+    } catch (err) {
+      console.error("Error saving goal:", err);
+      toast.error("Failed to save goal");
+      throw err;
+    }
   };
 
-  if (loading) return <LoadingOverlay text="Loading insights..." />;
+  // Detect anomalies
+  const anomalies = [];
+  const highestCategory = topCategories[0];
+  if (highestCategory && highestCategory[1] > totalSpending * 0.4) {
+    anomalies.push({
+      id: "high-category",
+      title: "High Category Spending",
+      description: `${highestCategory[0]} accounts for ${((highestCategory[1] / totalSpending) * 100).toFixed(1)}% of your spending.`,
+      severity: "warning",
+    });
+  }
 
-  return (
-    <>
-      <h2 className="dash-title">Financial Insights</h2>
-      <p className="dash-sub">Smart analysis of your spending patterns & real-time alerts</p>
+  if (savingsRate < 0) {
+    anomalies.push({
+      id: "deficit",
+      title: "Spending Exceeds Income",
+      description: "Your expenses are higher than income this period. Review budget and reduce spending.",
+      severity: "critical",
+    });
+  }
 
-      {/* Critical Alerts Banner */}
-      {criticalAlerts.length > 0 && (
-        <div className="critical-alerts-banner">
-          <div className="banner-content">
-            <span className="banner-icon">⚠️</span>
-            <div>
-              <strong>Security Alert</strong>
-              <p>{criticalAlerts[0].message}</p>
-            </div>
-            <button className="banner-cta">{criticalAlerts[0].cta}</button>
-            <button
-              className="banner-close"
-              onClick={() => dismissAlert(criticalAlerts[0].id)}
-            >
-              ✕
+  const monthlyAvg = monthlyTrend.length > 0 ? monthlyTrend.reduce((sum, [_, amt]) => sum + amt, 0) / monthlyTrend.length : 0;
+  const lastMonthSpending = monthlyTrend.length > 0 ? monthlyTrend[monthlyTrend.length - 1][1] : 0;
+  if (lastMonthSpending > monthlyAvg * 1.3) {
+    anomalies.push({
+      id: "spike",
+      title: "Unusual Spending Spike",
+      description: `Last month's spending (₹${lastMonthSpending.toFixed(0)}) is 30% higher than average (₹${monthlyAvg.toFixed(0)}).`,
+      severity: "warning",
+    });
+  }
+
+  const maxTrendValue = Math.max(...monthlyTrend.map((m) => m[1] || 0), 1);
+  const maxCategoryValue = Math.max(...Object.values(categoryData), 1);
+
+  if (loading) return <LoadingOverlay text="Loading financial insights..." />;
+
+  // Check if insights analytics is enabled
+  if (!checkInsightsEnabled()) {
+    return (
+      <div className="insights-container">
+        <div className="insights-header">
+          <div>
+            <h1 className="dash-title">Financial Insights</h1>
+            <p className="dash-sub">Comprehensive analysis of your spending, income, and financial health</p>
+          </div>
+        </div>
+        <div className="disabled-section">
+          <div className="disabled-card">
+            <div className="disabled-icon">📊</div>
+            <h2>Insights & Analytics Disabled</h2>
+            <p>You have turned off Insights & Analytics notifications in your settings.</p>
+            <p className="disabled-info">To enable and view financial insights, please go to Settings and turn on "Insights & Analytics".</p>
+            <button className="enable-btn" onClick={() => window.location.hash = "#/settings"}>
+              Go to Settings
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="insights-container">
+      <div className="insights-header">
+        <div>
+          <h1 className="dash-title">Financial Insights</h1>
+          <p className="dash-sub">Comprehensive analysis of your spending, income, and financial health</p>
+        </div>
+        <div className="time-filter">
+          <button className={timeRange === "month" ? "active" : ""} onClick={() => setTimeRange("month")}>
+            This Month
+          </button>
+          <button className={timeRange === "quarter" ? "active" : ""} onClick={() => setTimeRange("quarter")}>
+            This Quarter
+          </button>
+          <button className={timeRange === "year" ? "active" : ""} onClick={() => setTimeRange("year")}>
+            This Year
+          </button>
+        </div>
+      </div>
+
+      {/* Key Performance Indicators */}
+      <div className="kpi-grid">
+        <KPICard
+          icon="💰"
+          title="Total Spending"
+          value={`₹${totalSpending.toFixed(0)}`}
+          subtext={`${transactionCount} transactions`}
+          trend={12}
+        />
+        <KPICard
+          icon="📈"
+          title="Total Income"
+          value={`₹${totalIncome.toFixed(0)}`}
+          subtext="This period"
+          trend={8}
+        />
+        <KPICard
+          icon="💾"
+          title="Savings Rate"
+          value={`${savingsRate.toFixed(1)}%`}
+          subtext={savingsRate >= 20 ? "On track" : "Below target"}
+          trend={savingsRate >= 20 ? 5 : -3}
+        />
+        <KPICard
+          icon="✅"
+          title="Bills Paid"
+          value={`${paidBills}/${totalBills}`}
+          subtext={`₹${billsPaid.toFixed(0)}`}
+          trend={0}
+          pendingCount={pendingBills}
+        />
+        <KPICard
+          icon="🛍️"
+          title="Top Category"
+          value={highestCategory?.[0] || "N/A"}
+          subtext={`₹${(highestCategory?.[1] || 0).toFixed(0)}`}
+        />
+        <KPICard
+          icon="📊"
+          title="Avg Daily Spend"
+          value={`₹${avgDailySpending.toFixed(0)}`}
+          subtext="Based on 30 days"
+        />
+      </div>
+
+      {/* Anomaly Alerts */}
+      {anomalies.length > 0 && (
+        <div className="anomalies-section">
+          <h3>⚠️ Financial Alerts</h3>
+          <div className="anomalies-list">
+            {anomalies
+              .filter((a) => !dismissedAlerts.includes(a.id))
+              .map((anomaly) => (
+                <AnomalyAlert
+                  key={anomaly.id}
+                  title={anomaly.title}
+                  description={anomaly.description}
+                  severity={anomaly.severity}
+                  onDismiss={() => setDismissedAlerts([...dismissedAlerts, anomaly.id])}
+                />
+              ))}
+          </div>
+        </div>
       )}
 
-      {/* Alerts System */}
-      {alerts.length > 0 && (
-        <div className="alerts-section">
-          <div className="alerts-header">
-            <h3>Active Alerts ({alerts.length})</h3>
-            <div className="alert-filter">
-              <button className="filter-btn active">All</button>
-              <button className="filter-btn">Critical</button>
-              <button className="filter-btn">Payments</button>
-            </div>
+      {/* Spending Overview */}
+      <div className="dashboard-grid">
+        {/* Spending by Category */}
+        <div className="chart-card large">
+          <div className="card-header">
+            <h3>Spending by Category</h3>
+            <span className="card-subtitle">Top spending categories with hover highlighting</span>
           </div>
-          <div className="alerts-grid">
-            {alerts.map((alert) => (
-              <div
-                key={alert.id}
-                className={`alert-card alert-${alert.type}`}
-                onClick={() => setExpandedAlert(expandedAlert === alert.id ? null : alert.id)}
-              >
-                <div className="alert-header-row">
-                  <div className="alert-icon-title">
-                    <span className="alert-icon">{alert.icon}</span>
-                    <h4>{alert.title}</h4>
-                  </div>
-                  <span className={`alert-priority ${alert.priority}`}>{alert.priority}</span>
-                </div>
+          {topCategories.length > 0 ? (
+            <InteractiveBarChart
+              data={topCategories}
+              maxValue={maxCategoryValue}
+              onHover={setHoveredCategory}
+              hoveredItem={hoveredCategory}
+            />
+          ) : (
+            <p className="no-data">No spending data available</p>
+          )}
+        </div>
 
-                <p className="alert-message">{alert.message}</p>
+        {/* Monthly Trend Chart */}
+        <div className="chart-card large">
+          <div className="card-header">
+            <h3>6-Month Spending Trend</h3>
+            <span className="card-subtitle">Track your spending patterns over time</span>
+          </div>
+          {monthlyTrend.length > 0 ? (
+            <div className="trend-chart-container">
+              <div className="trend-bars">
+                {monthlyTrend.map(([month, amount], i) => {
+                  const height = (amount / maxTrendValue) * 150;
+                  const isHigh = amount > maxTrendValue * 0.7;
 
-                {expandedAlert === alert.id && (
-                  <div className="alert-expanded">
-                    <div className="alert-channels">
-                      <span className="channel-label">Notify via:</span>
-                      <div className="channel-options">
-                        {notificationPreferences.sms && (
-                          <span className="channel-badge sms">📱 SMS</span>
-                        )}
-                        {notificationPreferences.email && (
-                          <span className="channel-badge email">📧 Email</span>
-                        )}
-                        {notificationPreferences.push && (
-                          <span className="channel-badge push">🔔 Push</span>
-                        )}
+                  return (
+                    <div key={i} className="trend-bar-wrapper" title={`${month}: ₹${amount.toFixed(0)}`}>
+                      <div className="trend-bar-value" style={{ height: "20px", textAlign: "center" }}>
+                        <span style={{ fontSize: "10px" }}>₹{(amount / 1000).toFixed(1)}K</span>
                       </div>
+                      <div
+                        className={`trend-bar ${isHigh ? "high" : ""}`}
+                        style={{
+                          height: `${height}px`,
+                          backgroundColor: isHigh ? "#ef4444" : "#3b82f6",
+                        }}
+                      />
+                      <div className="trend-label">{month}</div>
                     </div>
-                    <button className="alert-cta">{alert.cta}</button>
-                  </div>
-                )}
-
-                <button
-                  className="alert-dismiss"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    dismissAlert(alert.id);
-                  }}
-                >
-                  ✕
-                </button>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Summary Cards with Smart Nudges */}
-      <div className="grid">
-        <div className="glass-card stat-card">
-          <div className="stat-header">
-            <span>💰 Total Spending</span>
-            <span className="trend-badge up">↑ 12%</span>
-          </div>
-          <strong>₹{totalSpending.toFixed(0)}</strong>
-          <small>This month</small>
-        </div>
-
-        <div className="glass-card stat-card">
-          <div className="stat-header">
-            <span>✅ Bills Paid</span>
-            <span className="completion-badge">{bills.length > 0 ? Math.round((paidBills / bills.length) * 100) : 0}%</span>
-          </div>
-          <strong>{paidBills}/{bills.length || 0}</strong>
-          <small>₹{billsPaid.toFixed(0)}</small>
-        </div>
-
-        <div className="glass-card stat-card">
-          <div className="stat-header">
-            <span>📊 Savings Rate</span>
-            <span className="trend-badge">Goal: 20%</span>
-          </div>
-          <strong>{savingsRateValue.toFixed(1)}%</strong>
-          <small>Estimated</small>
-        </div>
-
-        <div className="glass-card stat-card">
-          <div className="stat-header">
-            <span>🏪 Top Category</span>
-            <span className="category-icon">{topCategories[0]?.[0]}</span>
-          </div>
-          <strong>₹{(topCategories[0]?.[1] || 0).toFixed(0)}</strong>
-          <small>{topCategories[0]?.[0] || "No data"}</small>
-        </div>
-      </div>
-
-      {/* Charts Section - Category Distribution */}
-      <div className="insights-section">
-        <div className="insight-card full-width">
-          <div className="card-header">
-            <h3>Category Distribution</h3>
-            <span className="card-subtitle">Spending breakdown</span>
-          </div>
-          <CategoryDonut categoryData={categoryData} maxValue={maxCatValue} />
-        </div>
-      </div>
-
-      {/* Charts Section - Category Comparison */}
-      <div className="insights-section">
-        <div className="insight-card full-width">
-          <div className="card-header">
-            <h3>Top 5 Categories</h3>
-            <span className="card-subtitle">Visual comparison</span>
-          </div>
-          <CategoryComparison categoryData={categoryData} />
+            </div>
+          ) : (
+            <p className="no-data">No trend data available</p>
+          )}
         </div>
       </div>
 
       {/* Spending Gauges */}
-      <div className="insights-section">
-        <div className="glass-card" style={{ display: "flex", justifyContent: "space-around", padding: "20px", flexWrap: "wrap" }}>
-          <SpendingGauge current={totalSpending * 0.4} budget={totalSpending || 1} label="Spending Progress" />
-          <SpendingGauge current={billsPaid} budget={bills.reduce((s, b) => s + Number(b.amount_due), 0) || 1} label="Bills Paid" />
-          <SpendingGauge current={savingsRateValue} budget={20} label="Savings Rate %" />
-        </div>
+      <div className="gauges-grid">
+        <ProfessionalGauge
+          current={totalSpending}
+          budget={userGoals.spending_goal}
+          label="Monthly Spending"
+          color="#3b82f6"
+          onEditGoal={() => handleEditGoal("spending_goal", "Monthly Spending Goal")}
+        />
+        <ProfessionalGauge
+          current={billsPaid}
+          budget={totalBillsAmount}
+          label="Bills Payment Progress"
+          color="#10b981"
+        />
+        <ProfessionalGauge
+          current={savingsRate}
+          budget={userGoals.savings_goal}
+          label="Savings Rate Goal"
+          color="#f59e0b"
+          formatType="percentage"
+          onEditGoal={() => handleEditGoal("savings_goal", "Savings Rate Goal")}
+        />
       </div>
 
-      {/* Charts Section */}
-      <div className="insights-section">
-        {/* Spending by Category with Bar Chart */}
-        <div className="insight-card">
-          <div className="card-header">
-            <h3>Spending Breakdown</h3>
-            <span className="card-subtitle">Top 5 categories</span>
-          </div>
-          <div className="chart-container">
-            {topCategories.length === 0 ? (
-              <p style={{ opacity: 0.6 }}>No data</p>
-            ) : (
-              topCategories.map(([cat, amount], i) => {
-                const percentage = (amount / maxCatValue) * 100;
-                const categoryColors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
-                const categoryEmojis = {
-                  "Shopping": "🛍️",
-                  "Dining": "🍽️",
-                  "Groceries": "🛒",
-                  "Entertainment": "🎬",
-                  "Transport": "🚗",
-                  "Utilities": "⚡",
-                  "Other": "📌"
-                };
-
-                return (
-                  <div key={i} className="chart-bar-enhanced">
-                    <div className="bar-label-enhanced">
-                      <div className="cat-info">
-                        <span className="cat-emoji">{categoryEmojis[cat] || "📊"}</span>
-                        <span className="cat-name">{cat}</span>
-                      </div>
-                      <div className="cat-stats">
-                        <span className="cat-amount">₹{amount.toFixed(0)}</span>
-                        <span className="cat-percent">{((amount / totalSpending) * 100).toFixed(1)}%</span>
-                      </div>
-                    </div>
-                    <div className="bar-bg">
-                      <div
-                        className="bar-fill"
-                        style={{
-                          width: `${percentage}%`,
-                          background: `linear-gradient(90deg, ${categoryColors[i]}, ${categoryColors[i]}dd)`,
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Top Merchants with Interactive Elements */}
-        <div className="insight-card">
-          <div className="card-header">
-            <h3>Top Merchants</h3>
-            <span className="card-subtitle">Top 5 places</span>
-          </div>
-          <div className="merchant-list">
-            {topMerchants.length === 0 ? (
-              <p style={{ opacity: 0.6 }}>No data</p>
-            ) : (
-              topMerchants.map(([merchant, amount], i) => (
-                <div key={i} className="merchant-item-enhanced">
-                  <div className="merchant-rank">#{i + 1}</div>
-                  <div className="merchant-info">
-                    <strong>{merchant}</strong>
-                    <small>₹{amount.toFixed(0)}</small>
-                  </div>
-                  <div className="merchant-actions">
-                    <span className="merchant-amount">{((amount / totalSpending) * 100).toFixed(1)}%</span>
+      {/* Top Merchants */}
+      <div className="merchant-section">
+        <h3>Top Merchants</h3>
+        <span className="section-subtitle">Your most frequent spending places</span>
+        {topMerchants.length > 0 ? (
+          <div className="merchant-grid">
+            {topMerchants.map(([merchant, amount], i) => (
+              <div key={i} className="merchant-card">
+                <div className="merchant-rank">{i + 1}</div>
+                <div className="merchant-details">
+                  <h4>{merchant}</h4>
+                  <div className="merchant-amount">₹{amount.toFixed(0)}</div>
+                  <div className="merchant-percentage">
+                    {((amount / totalSpending) * 100).toFixed(1)}% of total
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly Trend with Interactive Visualization */}
-      <div className="insight-card full-width">
-        <div className="card-header">
-          <h3>6-Month Trend</h3>
-          <span className="card-subtitle">Spending pattern</span>
-        </div>
-        <div className="trend-chart">
-          <div className="trend-bars">
-            {monthlyTrend.length === 0 ? (
-              <p style={{ opacity: 0.6 }}>No data</p>
-            ) : (
-              monthlyTrend.map(([month, amount], i) => {
-                const height = (amount / maxTrendValue) * 200;
-                const isHighSpending = amount > maxTrendValue * 0.8;
-
-                return (
-                  <div key={i} className="trend-bar-wrapper">
-                    <div className="trend-bar-container">
-                      <div
-                        className={`trend-bar ${isHighSpending ? 'high-spending' : ''}`}
-                        style={{
-                          height: `${height}px`,
-                          background: isHighSpending
-                            ? `linear-gradient(180deg, #ef4444, #dc2626)`
-                            : `linear-gradient(180deg, #3b82f6, #2563eb)`,
-                        }}
-                      ></div>
-                    </div>
-                    <div className="trend-label">{month}</div>
-                    <div className="trend-value">₹{amount.toFixed(0)}</div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Key Insights - Visual & Minimal Text */}
-      <div className="insights-summary">
-        <h3>📊 Key Metrics</h3>
-        <div className="insight-items">
-          {topCategories.length > 0 && (
-            <div className="insight-item insight-item-action">
-              <span className="insight-icon">🎯</span>
-              <div>
-                <strong>{topCategories[0][0]}</strong>
-                <p>₹{topCategories[0][1].toFixed(0)} • {((topCategories[0][1] / totalSpending) * 100).toFixed(1)}%</p>
               </div>
-              <button className="insight-action">Budget</button>
-            </div>
-          )}
-
-          {topMerchants.length > 0 && (
-            <div className="insight-item insight-item-action">
-              <span className="insight-icon">🏪</span>
-              <div>
-                <strong>{topMerchants[0][0]}</strong>
-                <p>₹{topMerchants[0][1].toFixed(0)} spent</p>
-              </div>
-              <button className="insight-action">Track</button>
-            </div>
-          )}
-
-          <div className="insight-item insight-item-action">
-            <span className="insight-icon">✅</span>
-            <div>
-              <strong>Bills</strong>
-              <p>{paidBills}/{bills.length || 0} paid • {bills.length > 0 ? ((paidBills / bills.length) * 100).toFixed(0) : 0}%</p>
-            </div>
-            <button className="insight-action">View</button>
+            ))}
           </div>
+        ) : (
+          <p className="no-data">No merchant data available</p>
+        )}
+      </div>
 
-          <div className="insight-item insight-item-action">
-            <span className="insight-icon">💰</span>
-            <div>
-              <strong>Savings</strong>
-              <p>{savingsRateValue.toFixed(1)}% • Goal: 20%</p>
-            </div>
-            <button className="insight-action">Boost</button>
+      {/* Financial Summary Cards */}
+      <div className="summary-section">
+        <h3>Financial Summary</h3>
+        <div className="summary-grid">
+          <div className="summary-card">
+            <span className="summary-label">Transactions</span>
+            <span className="summary-value">{transactionCount}</span>
+            <span className="summary-subtext">Debit transactions</span>
+          </div>
+          <div className="summary-card">
+            <span className="summary-label">Avg Transaction</span>
+            <span className="summary-value">₹{transactionCount > 0 ? (totalSpending / transactionCount).toFixed(0) : "0"}</span>
+            <span className="summary-subtext">Per transaction</span>
+          </div>
+          <div className="summary-card">
+            <span className="summary-label">Highest Day</span>
+            <span className="summary-value">₹{(maxTrendValue / 30).toFixed(0)}</span>
+            <span className="summary-subtext">Estimated daily peak</span>
+          </div>
+          <div className="summary-card">
+            <span className="summary-label">Bill Status</span>
+            <span className="summary-value">
+              {totalBills > 0 ? Math.round((paidBills / totalBills) * 100) : 0}%
+            </span>
+            <span className="summary-subtext">Bills completed</span>
           </div>
         </div>
       </div>
 
-      {/* Notification Preferences */}
-      <div className="notification-preferences">
-        <h3>🔔 Alert Settings</h3>
-        <p className="pref-subtitle">Customize notifications</p>
-        <div className="preference-grid">
-          <div className="preference-card">
-            <div className="pref-header">
-              <span className="pref-icon">📱</span>
-              <h4>SMS</h4>
-            </div>
-            <p>Critical alerts</p>
-            <div className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={notificationPreferences.sms}
-                onChange={(e) => setNotificationPreferences({ ...notificationPreferences, sms: e.target.checked })}
-              />
-              <span className={notificationPreferences.sms ? 'enabled' : 'disabled'}>
-                {notificationPreferences.sms ? 'On' : 'Off'}
-              </span>
-            </div>
-          </div>
-
-          <div className="preference-card">
-            <div className="pref-header">
-              <span className="pref-icon">📧</span>
-              <h4>Email</h4>
-            </div>
-            <p>Detailed alerts</p>
-            <div className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={notificationPreferences.email}
-                onChange={(e) => setNotificationPreferences({ ...notificationPreferences, email: e.target.checked })}
-              />
-              <span className={notificationPreferences.email ? 'enabled' : 'disabled'}>
-                {notificationPreferences.email ? 'On' : 'Off'}
-              </span>
-            </div>
-          </div>
-
-          <div className="preference-card">
-            <div className="pref-header">
-              <span className="pref-icon">🔔</span>
-              <h4>Push</h4>
-            </div>
-            <p>Instant notifications</p>
-            <div className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={notificationPreferences.push}
-                onChange={(e) => setNotificationPreferences({ ...notificationPreferences, push: e.target.checked })}
-              />
-              <span className={notificationPreferences.push ? 'enabled' : 'disabled'}>
-                {notificationPreferences.push ? 'On' : 'Off'}
-              </span>
-            </div>
-          </div>
-        </div>
+      {/* Category Distribution Table */}
+      <div className="table-section">
+        <h3>Category Breakdown</h3>
+        <table className="insights-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>% of Total</th>
+              <th>Avg Transaction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {topCategories.map(([category, amount], i) => (
+              <tr key={i} className={hoveredCategory === category ? "highlighted" : ""}>
+                <td className="category-cell">
+                  <span className="category-indicator" style={{ backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#14b8a6"][i] }}></span>
+                  {category}
+                </td>
+                <td className="amount">₹{amount.toFixed(0)}</td>
+                <td className="percentage">{((amount / totalSpending) * 100).toFixed(1)}%</td>
+                <td className="avg">₹{(amount / (transactionCount / topCategories.length || 1)).toFixed(0)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </>
+
+      {/* Goals Edit Modal */}
+      {editingGoal && (
+        <GoalsEditModal
+          isOpen={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setEditingGoal(null);
+          }}
+          goalData={userGoals[editingGoal.name]}
+          goalLabel={editingGoal.label}
+          onSave={handleSaveGoal}
+        />
+      )}
+    </div>
   );
 }

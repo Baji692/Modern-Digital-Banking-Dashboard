@@ -16,6 +16,7 @@ export default function Rewards() {
   const [referralStats, setReferralStats] = useState({ friends_referred: 0, bonus_points_earned: 0, referral_code: "" });
   const [totalRewardPoints, setTotalRewardPoints] = useState(0);
   const [availablePoints, setAvailablePoints] = useState(0);
+  const [pendingRedemptions, setPendingRedemptions] = useState([]);
   const [monthlyPoints, setMonthlyPoints] = useState(0);
   const [rewardValue, setRewardValue] = useState(0);
   const [redeeming, setRedeeming] = useState(false);
@@ -129,6 +130,7 @@ export default function Rewards() {
           setTotalRewardPoints(rewardsSummary.total_points || 0);
           setRewardValue(rewardsSummary.reward_value_inr || 0);
           setMonthlyPoints(rewardsSummary.monthly_points || 0);
+          setPendingRedemptions(rewardsSummary.pending_redemptions || []);
         } else {
           console.warn("⚠ No rewards summary or breakdown:", rewardsSummary);
         }
@@ -151,6 +153,27 @@ export default function Rewards() {
     };
 
     loadData();
+
+    // Refresh data when page becomes visible (tab switched back)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Page is now visible - refreshing rewards data");
+        loadData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Also set up periodic refresh every 30 seconds to catch updates
+    const refreshInterval = setInterval(() => {
+      console.log("Periodic refresh of rewards data");
+      loadData();
+    }, 30000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(refreshInterval);
+    };
   }, [userId]);
 
   const rewardTiers = [
@@ -206,7 +229,7 @@ export default function Rewards() {
   // Handle redeem points
   const handleRedeem = async (redeemType, minPoints) => {
     // Use availablePoints for redemption eligibility when present
-    const have = availablePoints || totalRewardPoints;
+    const have = availablePoints;
     if (have < minPoints) {
       toast.warning(`You need ${minPoints} points to redeem this. You have ${have} available points.`);
       return;
@@ -231,7 +254,11 @@ export default function Rewards() {
       });
 
       if (result) {
-        toast.success(`Successfully redeemed ${points} points! Check your history for details.`);
+        if (type === "Cashback") {
+          toast.success(`✓ Cashback of ₹${(points * 0.01).toFixed(2)} instantly credited to your account!`);
+        } else {
+          toast.success(`Successfully redeemed ${points} points! Check your history for details.`);
+        }
         // Reload history
         const history = await apiFetch("get", "/rewards/redemption-history");
         if (Array.isArray(history)) {
@@ -243,6 +270,17 @@ export default function Rewards() {
           setRewardBreakdown(rewardsSummary.breakdown);
           setAvailablePoints(rewardsSummary.available_points ?? 0);
           setTotalRewardPoints(rewardsSummary.total_points || 0);
+          setPendingRedemptions(rewardsSummary.pending_redemptions || []);
+        }
+        // Reload accounts to show updated balance
+        const accountsData = await apiFetch("get", `/accounts/`);
+        if (Array.isArray(accountsData)) {
+          setAccounts(accountsData);
+        }
+        // Reload transactions to show HD Cashback transaction
+        const txnData = await apiFetch("get", `/transactions/`);
+        if (Array.isArray(txnData)) {
+          setTransactions(txnData);
         }
       }
     } catch (err) {
@@ -323,10 +361,10 @@ export default function Rewards() {
           <div className="rewards-summary-grid">
             <div className="glass-card reward-hero-card">
               <div className="reward-hero-header">
-                <span className="reward-hero-label">Total Rewards</span>
+                <span className="reward-hero-label">Available Reward Points</span>
                 <span className="reward-hero-icon">⭐</span>
               </div>
-              <div className="reward-hero-value">{(availablePoints || totalRewardPoints).toLocaleString()}</div>
+              <div className="reward-hero-value">{availablePoints.toLocaleString()}</div>
               <div className="reward-hero-sub">Total: {totalRewardPoints.toLocaleString()} pts • ≈ ₹{rewardValue.toLocaleString()} cash value</div>
               <div className="reward-hero-meter">
                 <div className="meter-fill" style={{ width: Math.min((totalRewardPoints / 5000) * 100, 100) + '%' }}></div>
@@ -359,16 +397,102 @@ export default function Rewards() {
               <div className="reward-hero-bottom">Avg: {transactions.length > 0 ? Math.round((monthlyPoints || 0) / transactions.filter(t => t.txn_type === "debit").length * 10) / 10 : 0} pts per transaction</div>
             </div>
 
+          </div>
+
+          {/* Rewards Summary Section */}
+          <div className="rewards-summary-grid" style={{ marginTop: '20px' }}>
             <div className="glass-card reward-hero-card">
               <div className="reward-hero-header">
-                <span className="reward-hero-label">Redemption</span>
-                <span className="reward-hero-icon">🎁</span>
+                <span className="reward-hero-label">Available</span>
+                <span className="reward-hero-icon">✓</span>
               </div>
-              <div className="reward-hero-value">5+</div>
-              <div className="reward-hero-sub">Options available</div>
-              <div className="reward-hero-bottom">Cashback, Cards, Travel & more</div>
+              <div className="reward-hero-value" style={{ color: '#10b981' }}>
+                {availablePoints.toLocaleString()}
+              </div>
+              <div className="reward-hero-sub">Points to redeem now</div>
+            </div>
+            <div className="glass-card reward-hero-card">
+              <div className="reward-hero-header">
+                <span className="reward-hero-label">Lifetime Earned</span>
+                <span className="reward-hero-icon">⭐</span>
+              </div>
+              <div className="reward-hero-value" style={{ color: '#f59e0b' }}>
+                {totalRewardPoints.toLocaleString()}
+              </div>
+              <div className="reward-hero-sub">Total points earned</div>
+            </div>
+            <div className="glass-card reward-hero-card">
+              <div className="reward-hero-header">
+                <span className="reward-hero-label">Redeemed</span>
+                <span className="reward-hero-icon">💳</span>
+              </div>
+              <div className="reward-hero-value" style={{ color: '#3b82f6' }}>
+                {redemptionHistory.filter(r => r.status === 'Completed').reduce((sum, r) => sum + (parseInt(r.pointsUsed) || 0), 0).toLocaleString()}
+              </div>
+              <div className="reward-hero-sub">Points converted</div>
             </div>
           </div>
+
+          {/* Redemption History & Completed Redemptions - Side by Side */}
+          {(() => {
+            const completedRedemptions = redemptionHistory.filter(r => r.status === 'Completed');
+            const hasPending = pendingRedemptions && pendingRedemptions.length > 0;
+            const hasCompleted = completedRedemptions.length > 0;
+
+            if (hasPending || hasCompleted) {
+              return (
+                <div className="rewards-summary-grid" style={{ marginTop: '20px', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  {/* Redemption History - Pending Card */}
+                  {hasPending && (
+                    <div className="glass-card reward-hero-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                      <div className="reward-hero-header">
+                        <span className="reward-hero-label">Redemption History</span>
+                        <span className="reward-hero-icon">⏳</span>
+                      </div>
+                      <div className="reward-hero-value" style={{ color: '#f59e0b' }}>
+                        {pendingRedemptions.reduce((sum, r) => sum + (parseInt(r.points) || 0), 0).toLocaleString()}
+                      </div>
+                      <div className="reward-hero-sub">Points pending ({pendingRedemptions.length} request{pendingRedemptions.length > 1 ? 's' : ''})</div>
+                      <div className="reward-hero-bottom" style={{ fontSize: '12px', marginTop: '8px' }}>
+                        {pendingRedemptions.map((r, idx) => (
+                          <div key={idx} style={{ marginBottom: '4px', color: 'rgba(255,255,255,0.8)' }}>
+                            {r.points} pts • {r.type} • <span style={{ color: '#f59e0b' }}>Pending</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Completed Redemptions Card */}
+                  {hasCompleted && (
+                    <div className="glass-card reward-hero-card" style={{ borderLeft: '4px solid #10b981' }}>
+                      <div className="reward-hero-header">
+                        <span className="reward-hero-label">Completed Redemptions</span>
+                        <span className="reward-hero-icon">✅</span>
+                      </div>
+                      <div className="reward-hero-value" style={{ color: '#10b981' }}>
+                        {completedRedemptions.reduce((sum, r) => sum + (parseInt(r.pointsUsed) || 0), 0).toLocaleString()}
+                      </div>
+                      <div className="reward-hero-sub">Points redeemed ({completedRedemptions.length} redemption{completedRedemptions.length > 1 ? 's' : ''})</div>
+                      <div className="reward-hero-bottom" style={{ fontSize: '12px', marginTop: '8px' }}>
+                        {completedRedemptions.slice(0, 3).map((r, idx) => (
+                          <div key={idx} style={{ marginBottom: '4px', color: 'rgba(255,255,255,0.8)' }}>
+                            {r.pointsUsed} pts • {r.type} • <span style={{ color: '#10b981' }}>✓</span>
+                          </div>
+                        ))}
+                        {completedRedemptions.length > 3 && (
+                          <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                            +{completedRedemptions.length - 3} more...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* Redeem confirmation modal */}
           {showRedeemModal && (
@@ -425,51 +549,50 @@ export default function Rewards() {
             </div>
           </div>
 
-          {/* Two Column Layout */}
-          <div className="rewards-content-grid">
-            {/* Left Column */}
-            <div>
-              {/* Reward Breakdown by Category */}
-              <div className="reward-section">
-                <div className="section-header">
-                  <h3 style={{ color: "#ffffff", margin: 0 }}>Earning Breakdown</h3>
-                  <span className="section-tag">by category</span>
+          {/* Earning Breakdown Section */}
+          <div className="reward-section">
+            <div className="section-header">
+              <h3 style={{ color: "#ffffff", margin: 0 }}>Earning Breakdown</h3>
+              <span className="section-tag">by category</span>
+            </div>
+            <div className="reward-categories-grid">
+              {[
+                { key: "shopping", label: "Shopping", icon: "🛍️", color: "#3b82f6" },
+                { key: "dining", label: "Dining", icon: "🍽️", color: "#ef4444" },
+                { key: "groceries", label: "Groceries", icon: "🛒", color: "#10b981" },
+                { key: "utilities", label: "Utilities", icon: "⚡", color: "#f59e0b" },
+                { key: "other", label: "Other", icon: "📌", color: "#8b5cf6" },
+              ].map((cat) => (
+                <div key={cat.key} className="glass-card reward-category-card">
+                  <div className="category-icon" style={{ borderColor: cat.color }}>
+                    {cat.icon}
+                  </div>
+                  <div className="category-name">{cat.label}</div>
+                  <div className="category-points">{rewardBreakdown[cat.key]}</div>
+                  <div className="category-percent">
+                    {(
+                      (rewardBreakdown[cat.key] / (totalRewardPoints || 1)) *
+                      100
+                    ).toFixed(0)}%
+                  </div>
+                  <div className="category-bar">
+                    <div
+                      className="category-bar-fill"
+                      style={{
+                        width: ((rewardBreakdown[cat.key] / (totalRewardPoints || 1)) * 100) + '%',
+                        background: cat.color
+                      }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="reward-categories-grid">
-                  {[
-                    { key: "shopping", label: "Shopping", icon: "🛍️", color: "#3b82f6" },
-                    { key: "dining", label: "Dining", icon: "🍽️", color: "#ef4444" },
-                    { key: "groceries", label: "Groceries", icon: "🛒", color: "#10b981" },
-                    { key: "utilities", label: "Utilities", icon: "⚡", color: "#f59e0b" },
-                    { key: "other", label: "Other", icon: "📌", color: "#8b5cf6" },
-                  ].map((cat) => (
-                    <div key={cat.key} className="glass-card reward-category-card">
-                      <div className="category-icon" style={{ borderColor: cat.color }}>
-                        {cat.icon}
-                      </div>
-                      <div className="category-name">{cat.label}</div>
-                      <div className="category-points">{rewardBreakdown[cat.key]}</div>
-                      <div className="category-percent">
-                        {(
-                          (rewardBreakdown[cat.key] / (totalRewardPoints || 1)) *
-                          100
-                        ).toFixed(0)}%
-                      </div>
-                      <div className="category-bar">
-                        <div
-                          className="category-bar-fill"
-                          style={{
-                            width: ((rewardBreakdown[cat.key] / (totalRewardPoints || 1)) * 100) + '%',
-                            background: cat.color
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
+            </div>
+          </div>
 
-              {/* Membership Tiers */}
+          {/* Two Column Layout - Membership Tiers & Recent Earnings */}
+          <div className="rewards-content-grid">
+            {/* Left Column - Membership Tiers */}
+            <div>
               <div className="reward-section">
                 <div className="section-header">
                   <h3 style={{ color: "#ffffff", margin: 0 }}>Membership Tiers</h3>
@@ -517,6 +640,16 @@ export default function Rewards() {
                                 }}
                               ></div>
                             </div>
+                            {i < rewardTiers.length - 1 && (
+                              <div style={{ fontSize: '12px', color: '#d1d5db', marginTop: '8px' }}>
+                                Next Tier: {rewardTiers[i + 1].name} – {(rewardTiers[i + 1].minPoints - totalRewardPoints).toLocaleString()} points to go
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {isLocked && i > 0 && (
+                          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px', padding: '6px 0' }}>
+                            Unlocks at {tier.name} ({tier.minPoints.toLocaleString()} points)
                           </div>
                         )}
                       </div>
@@ -526,72 +659,8 @@ export default function Rewards() {
               </div>
             </div>
 
-            {/* Right Column */}
+            {/* Right Column - Recent Earnings */}
             <div>
-              {/* Redemption Options */}
-              <div className="reward-section">
-                <div className="section-header">
-                  <h3 style={{ color: "#ffffff", margin: 0 }}>Redeem Points</h3>
-                  <span className="section-tag">flexible options</span>
-                </div>
-                <div className="redemption-grid-pro">
-                  {[
-                    {
-                      name: "Cashback",
-                      value: "1 point = ₹1",
-                      minPoints: 100,
-                      icon: "💰",
-                      color: "#10b981"
-                    },
-                    {
-                      name: "Gift Cards",
-                      value: "Amazon, Flipkart, etc.",
-                      minPoints: 500,
-                      icon: "🎁",
-                      color: "#f59e0b"
-                    },
-                    {
-                      name: "Travel",
-                      value: "Flight bookings, Hotels",
-                      minPoints: 1000,
-                      icon: "✈️",
-                      color: "#3b82f6"
-                    },
-                    {
-                      name: "Shopping",
-                      value: "Partner brand vouchers",
-                      minPoints: 300,
-                      icon: "🛍️",
-                      color: "#ef4444"
-                    },
-                  ].map((option, i) => {
-                    const have = availablePoints || totalRewardPoints;
-                    const canRedeem = have >= option.minPoints;
-                    return (
-                      <div key={i} className={`glass-card redemption-card-pro ${!canRedeem ? 'locked' : ''}`}>
-                        <div className="redemption-header">
-                          <span className="redemption-icon-pro">{option.icon}</span>
-                          {canRedeem && <span className="redemption-badge">Available</span>}
-                        </div>
-                        <strong className="redemption-name">{option.name}</strong>
-                        <p className="redemption-value">{option.value}</p>
-                        <div className="redemption-requirement">
-                          Min: {option.minPoints} pts
-                        </div>
-                        <button
-                          className={`redeem-btn-pro ${canRedeem ? 'active' : ''}`}
-                          disabled={!canRedeem || redeeming}
-                          onClick={() => handleRedeem(option.name, option.minPoints)}
-                        >
-                          {redeeming ? `Processing...` : canRedeem ? `Redeem Now` : `Locked`}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Recent Transactions Contributing to Rewards */}
               <div className="reward-section">
                 <div className="section-header">
                   <h3 style={{ color: "#ffffff", margin: 0 }}>Recent Earnings</h3>
@@ -634,6 +703,91 @@ export default function Rewards() {
                     })}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Redemption Options Section */}
+          <div className="reward-section">
+            <div className="section-header">
+              <h3 style={{ color: "#ffffff", margin: 0 }}>Redeem Points</h3>
+              <span className="section-tag">flexible options</span>
+            </div>
+            <div className="redemption-grid-pro">
+              {[
+                {
+                  name: "Cashback (Instant Credit)",
+                  type: "Cashback",
+                  value: "100 points = ₹1",
+                  helper: "Instantly credited to your primary account",
+                  minPoints: 100,
+                  icon: "💰",
+                  color: "#10b981",
+                  tier: null
+                },
+                {
+                  name: "Gift Cards",
+                  type: "Gift Cards",
+                  value: "Amazon, Flipkart, Myntra & more",
+                  helper: "Instant digital delivery",
+                  minPoints: 500,
+                  icon: "🎁",
+                  color: "#f59e0b",
+                  tier: "Gold"
+                },
+                {
+                  name: "Travel Rewards",
+                  type: "Travel",
+                  value: "Flights, Hotels & more",
+                  helper: "Book with your preferred partner",
+                  minPoints: 1000,
+                  icon: "✈️",
+                  color: "#3b82f6",
+                  tier: "Platinum"
+                },
+                {
+                  name: "Shopping",
+                  type: "Shopping",
+                  value: "Partner brand vouchers",
+                  helper: "Use at select retailers",
+                  minPoints: 300,
+                  icon: "🛍️",
+                  color: "#ef4444",
+                  tier: "Gold"
+                },
+              ].map((option, i) => {
+                const have = availablePoints;
+                const canRedeem = have >= option.minPoints;
+                const unlocksTier = option.tier ? rewardTiers.find(t => t.name === option.tier) : null;
+                const tierUnlockPoints = unlocksTier ? unlocksTier.minPoints : null;
+
+                return (
+                  <div key={i} className={`glass-card redemption-card-pro ${!canRedeem ? 'locked' : ''}`}>
+                    <div className="redemption-header">
+                      <span className="redemption-icon-pro">{option.icon}</span>
+                      {canRedeem && <span className="redemption-badge">Available</span>}
+                      {!canRedeem && option.tier && <span className="redemption-badge" style={{ background: '#6b7280' }}>Tier Lock</span>}
+                    </div>
+                    <strong className="redemption-name">{option.name}</strong>
+                    <p className="redemption-value">{option.value}</p>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', margin: '4px 0 6px 0' }}>{option.helper}</p>
+                    <div className="redemption-requirement">
+                      Min: {option.minPoints} pts
+                    </div>
+                    {!canRedeem && option.tier && (
+                      <div style={{ fontSize: '12px', color: '#f59e0b', marginBottom: '6px', padding: '6px', background: 'rgba(245,158,11,0.1)', borderRadius: '4px' }}>
+                        🔒 Unlocks at {option.tier} ({tierUnlockPoints?.toLocaleString()} points)
+                      </div>
+                    )}
+                    <button
+                      className={`redeem-btn-pro ${canRedeem ? 'active' : ''}`}
+                      disabled={!canRedeem || redeeming}
+                      onClick={() => handleRedeem(option.type, option.minPoints)}
+                    >
+                      {redeeming ? `Processing...` : canRedeem ? `Redeem Now` : `Locked`}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

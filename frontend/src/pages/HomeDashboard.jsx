@@ -4,6 +4,7 @@ import { apiFetch } from "../api";
 
 export default function HomeDashboard({ user }) {
   const name = user?.name || "User";
+  const userId = user?.id;
 
   /* ================= STATE ================= */
   const [recentTransactions, setRecentTransactions] = useState([]);
@@ -11,22 +12,29 @@ export default function HomeDashboard({ user }) {
   const [allTransactions, setAllTransactions] = useState([]);
   const [upcomingBills, setUpcomingBills] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [monthlyRewardPoints, setMonthlyRewardPoints] = useState(0);
 
   /* ================= LOAD DATA ================= */
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [accData, txnData, recentData, billData] = await Promise.all([
+        const [accData, txnData, recentData, billData, rewardsData] = await Promise.all([
           apiFetch("get", "/accounts/"),
           apiFetch("get", "/transactions/"),
           apiFetch("get", "/transactions/recent"),
           apiFetch("get", "/bills/upcoming"),
+          userId ? apiFetch("get", `/rewards/summary/${userId}`) : Promise.resolve(null),
         ]);
 
         setAccounts(accData || []);
         setAllTransactions(txnData || []);
         setRecentTransactions((recentData || []).slice(0, 5));
         setUpcomingBills((billData || []).slice(0, 4));
+
+        // Set monthly reward points from backend
+        if (rewardsData && rewardsData.monthly_points) {
+          setMonthlyRewardPoints(rewardsData.monthly_points);
+        }
 
         // Generate dynamic alerts
         generateAlerts(accData || [], billData || []);
@@ -35,8 +43,10 @@ export default function HomeDashboard({ user }) {
       }
     };
 
-    loadData();
-  }, []);
+    if (userId) {
+      loadData();
+    }
+  }, [userId]);
 
   const generateAlerts = (accs, bills) => {
     const generatedAlerts = [];
@@ -177,9 +187,9 @@ export default function HomeDashboard({ user }) {
         </div>
 
         <div className="glass-card metric-card">
-          <span>Available Rewards</span>
-          <strong>{Math.floor(monthlySpending * 0.02)}</strong>
-          <small>≈ ₹{Math.floor(monthlySpending * 0.02)}</small>
+          <span>This Month's Rewards</span>
+          <strong>{monthlyRewardPoints.toLocaleString()}</strong>
+          <small>≈ ₹{(monthlyRewardPoints / 100).toFixed(2)}</small>
           <div className="metric-bar">
             <div
               className="metric-bar-fill gold"

@@ -24,6 +24,8 @@ import Budgets from "./pages/Budgets";
 import Bills from "./pages/Bills";
 import Rewards from "./pages/Rewards";
 import Insights from "./pages/Insights";
+import GoalsSettings from "./pages/GoalsSettings";
+import UserSettings from "./pages/UserSettings";
 
 /* ---------------- EMAIL VALIDATION ---------------- */
 function isValidEmail(email) {
@@ -225,6 +227,8 @@ function App() {
       "bills",
       "rewards",
       "insights",
+      "goals",
+      "settings",
     ];
 
     const parseHash = () => {
@@ -301,6 +305,8 @@ function App() {
           {dashScreen === "transactions" && <Transactions />}
           {dashScreen === "rewards" && <Rewards />}
           {dashScreen === "insights" && <Insights />}
+          {dashScreen === "goals" && <GoalsSettings />}
+          {dashScreen === "settings" && <UserSettings navigate={navigate} />}
         </DashboardLayout>
       )}
 

@@ -226,7 +226,8 @@ def import_transactions_csv(
         raise HTTPException(status_code=404, detail="Account not found")
 
     if not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+        raise HTTPException(
+            status_code=400, detail="Only CSV files are allowed")
 
     content = file.file.read().decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(content))
@@ -234,7 +235,8 @@ def import_transactions_csv(
     required_columns = {"txn_date", "description", "amount", "txn_type"}
     missing = required_columns - set(reader.fieldnames or [])
     if missing:
-        raise HTTPException(status_code=400, detail=f"Missing columns: {missing}")
+        raise HTTPException(
+            status_code=400, detail=f"Missing columns: {missing}")
 
     transactions_to_insert = []
 
@@ -242,8 +244,35 @@ def import_transactions_csv(
         row = {k.strip(): v.strip() for k, v in row.items() if k and v}
 
         try:
-            parsed_date = datetime.strptime(row["txn_date"], "%Y-%m-%d").date()
-            txn_date = datetime.combine(parsed_date, time.min)
+            # Try to parse datetime with time first, then fall back to date only
+            txn_date = None
+            date_str = row["txn_date"]
+
+            # Try multiple datetime formats
+            datetime_formats = [
+                "%Y-%m-%d %H:%M:%S",      # 2026-01-13 14:30:45
+                "%Y-%m-%d %H:%M",         # 2026-01-13 14:30
+                "%d-%m-%Y %H:%M:%S",      # 13-01-2026 14:30:45
+                "%d-%m-%Y %H:%M",         # 13-01-2026 14:30
+                "%Y-%m-%d",               # 2026-01-13 (date only)
+                "%d-%m-%Y",               # 13-01-2026 (date only)
+            ]
+
+            for fmt in datetime_formats:
+                try:
+                    txn_date = datetime.strptime(date_str, fmt)
+                    break
+                except ValueError:
+                    continue
+
+            if txn_date is None:
+                raise ValueError(
+                    f"Unable to parse date: {date_str}. Use format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS")
+
+            # If only date was provided (no time), set to noon to distinguish from default 00:00:00
+            if txn_date.time() == time.min:
+                txn_date = datetime.combine(
+                    txn_date.date(), time(hour=12, minute=0))
 
             amount = Decimal(row["amount"])
             txn_type = row["txn_type"].lower()

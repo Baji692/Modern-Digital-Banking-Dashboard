@@ -95,8 +95,20 @@ function ResetPasswordNewPassword({ navigate }) {
       sessionStorage.removeItem("reset_email");
       sessionStorage.removeItem("reset_otp");
 
+      // Check if redirecting from settings
+      const fromSettings = sessionStorage.getItem("reset_from_settings");
+
       setTimeout(() => {
-        navigate("login");
+        if (fromSettings === "true") {
+          sessionStorage.removeItem("reset_from_settings");
+          navigate("dashboard");
+          // Navigate to settings page using hash
+          setTimeout(() => {
+            window.location.hash = "#/settings";
+          }, 500);
+        } else {
+          navigate("login");
+        }
       }, 1200);
     } catch (err) {
       toast.error(

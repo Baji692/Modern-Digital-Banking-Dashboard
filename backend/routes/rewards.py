@@ -8,11 +8,13 @@ from dependencies import get_current_user
 from typing import List, Optional
 import logging
 from datetime import datetime, timedelta
+from decimal import Decimal
 import random
 import string
 import os
 import requests
 from sqlalchemy.sql import func
+from sqlalchemy import or_
 from email_service import send_email, send_referral_invite
 
 router = APIRouter(prefix="/rewards", tags=["rewards"])
@@ -47,7 +49,10 @@ def get_rewards_summary(user_id: int, db: Session = Depends(get_db), current_use
         Transactions.account_id.in_(account_ids)
     ).all()
 
-    # Calculate rewards breakdown by category
+    # Calculate reward points - IDENTICAL calculation as redeem endpoint
+    current_points = 0
+
+    # Calculate rewards breakdown by category for detailed view
     reward_breakdown = {
         "shopping": 0,
         "dining": 0,
@@ -63,34 +68,67 @@ def get_rewards_summary(user_id: int, db: Session = Depends(get_db), current_use
 
             if "shopping" in category or "retail" in category:
                 # 2% for shopping
-                reward_breakdown["shopping"] += int(amount * 0.02)
+                pts = int(amount * 0.02)
+                reward_breakdown["shopping"] += pts
+                current_points += pts
             elif "dining" in category or "food" in category:
                 # 3% for dining
-                reward_breakdown["dining"] += int(amount * 0.03)
+                pts = int(amount * 0.03)
+                reward_breakdown["dining"] += pts
+                current_points += pts
             elif "utilities" in category:
                 # 1% for utilities
-                reward_breakdown["utilities"] += int(amount * 0.01)
+                pts = int(amount * 0.01)
+                reward_breakdown["utilities"] += pts
+                current_points += pts
             elif "groceries" in category:
                 # 1.5% for groceries
-                reward_breakdown["groceries"] += int(amount * 0.015)
+                pts = int(amount * 0.015)
+                reward_breakdown["groceries"] += pts
+                current_points += pts
             else:
                 # 1% for others
-                reward_breakdown["other"] += int(amount * 0.01)
+                pts = int(amount * 0.01)
+                reward_breakdown["other"] += pts
+                current_points += pts
 
-    total_reward_points = sum(reward_breakdown.values())
+    total_reward_points = current_points
     # NOTE: business rule: 100 points => ₹1 (legacy behavior used in UI)
     reward_value = total_reward_points // 100
 
-    # Subtract any points already used in redemptions (Pending or Completed)
+    # Subtract only COMPLETED redemptions from available points
+    # Pending redemptions are not yet processed, so they don't consume available points
     try:
         redeemed_sum = db.query(func.coalesce(func.sum(Redemptions.points_used), 0)).filter(
             Redemptions.user_id == user_id,
-            Redemptions.status != "Cancelled"
+            Redemptions.status == "Completed"
         ).scalar() or 0
     except Exception:
         redeemed_sum = 0
 
     available_points = max(0, int(total_reward_points - int(redeemed_sum)))
+
+    logging.info(
+        f"User {user_id} - Total: {total_reward_points}, Redeemed: {int(redeemed_sum)}, Available: {available_points}")
+
+    # Get pending redemptions to show user
+    try:
+        pending_redemptions = db.query(Redemptions).filter(
+            Redemptions.user_id == user_id,
+            Redemptions.status == "Pending"
+        ).all()
+        pending_redemptions_data = [
+            {
+                "id": r.id,
+                "type": r.redemption_type,
+                "points": int(r.points_used),
+                "amount": float(r.amount_value),
+                "date": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in pending_redemptions
+        ]
+    except Exception:
+        pending_redemptions_data = []
 
     # Currency summaries using external exchange rate API (optional)
     exchange_api = os.getenv(
@@ -140,9 +178,17 @@ def get_rewards_summary(user_id: int, db: Session = Depends(get_db), current_use
     except Exception:
         monthly_points = 0
 
+    logging.info(f"=== SUMMARY for user {user_id} ===")
+    logging.info(f"Total Points: {total_reward_points}")
+    logging.info(f"Redeemed Sum: {redeemed_sum}")
+    logging.info(f"Available Points: {available_points}")
+    logging.info(f"Monthly Points: {monthly_points}")
+    logging.info(f"Pending Redemptions: {len(pending_redemptions_data)}")
+
     return {
         "total_points": total_reward_points,
         "available_points": available_points,
+        "pending_redemptions": pending_redemptions_data,
         "monthly_points": monthly_points,
         "reward_value_inr": reward_value,
         "currency_summary": currency_summary,
@@ -215,7 +261,7 @@ def get_redemption_history(db: Session = Depends(get_db), current_user=Depends(g
             Redemptions.user_id == current_user.id
         ).order_by(Redemptions.created_at.desc()).all()
 
-        return [
+        result = [
             {
                 "id": r.id,
                 "user_id": r.user_id,
@@ -228,6 +274,14 @@ def get_redemption_history(db: Session = Depends(get_db), current_user=Depends(g
             }
             for r in redemptions
         ]
+
+        logging.info(
+            f"Redemption history for user {current_user.id}: {len(result)} records")
+        for item in result:
+            logging.info(
+                f"  - {item['type']} ({item['status']}): {item['pointsUsed']} pts = ₹{item['amount']}")
+
+        return result
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error fetching redemption history: {str(e)}")
@@ -335,11 +389,12 @@ def redeem_points(data: RedemptionCreate, db: Session = Depends(get_db), current
     accounts = db.query(Accounts).filter(
         Accounts.user_id == current_user.id).all()
     account_ids = [acc.id for acc in accounts]
+
     transactions = db.query(Transactions).filter(
         Transactions.account_id.in_(account_ids)
     ).all()
 
-    # Calculate current points
+    # Calculate current points - IDENTICAL to summary endpoint
     current_points = 0
     for txn in transactions:
         if txn.txn_type == "debit":
@@ -356,13 +411,14 @@ def redeem_points(data: RedemptionCreate, db: Session = Depends(get_db), current
             else:
                 current_points += int(amount * 0.01)
 
-    # Subtract points already used in prior (non-cancelled) redemptions
+    # Subtract only COMPLETED redemptions from available points
+    # Pending redemptions are not yet processed, so they don't consume available points
     try:
         redeemed_sum = db.query(func.coalesce(func.sum(Redemptions.points_used), 0)).filter(
             Redemptions.user_id == current_user.id,
-            Redemptions.status != "Cancelled"
+            Redemptions.status == "Completed"
         ).scalar() or 0
-    except Exception:
+    except Exception as e:
         redeemed_sum = 0
 
     available_points = max(0, int(current_points - int(redeemed_sum)))
@@ -374,17 +430,20 @@ def redeem_points(data: RedemptionCreate, db: Session = Depends(get_db), current
 
     # Validate redemption type and calculate value
     redemption_rates = {
-        "Cashback": 1.0,  # 1 point = ₹1
-        "Gift Cards": 0.95,  # 1 point = ₹0.95
-        "Travel": 0.90,  # 1 point = ₹0.90
-        "Shopping": 0.95,  # 1 point = ₹0.95
+        "Cashback": 0.01,  # 100 points = ₹1
+        "Gift Cards": 0.0095,  # 100 points = ₹0.95
+        "Travel": 0.0090,  # 100 points = ₹0.90
+        "Shopping": 0.0095,  # 100 points = ₹0.95
     }
 
     if data.redemption_type not in redemption_rates:
         raise HTTPException(status_code=400, detail="Invalid redemption type")
 
-    amount_value = float(data.points_to_use) * \
-        redemption_rates[data.redemption_type]
+    amount_value = Decimal(str(data.points_to_use)) * \
+        Decimal(str(redemption_rates[data.redemption_type]))
+
+    # Determine redemption status - Cashback is instantly completed
+    redemption_status = "Completed" if data.redemption_type == "Cashback" else "Pending"
 
     # Create redemption record
     redemption = Redemptions(
@@ -393,19 +452,72 @@ def redeem_points(data: RedemptionCreate, db: Session = Depends(get_db), current
         points_used=data.points_to_use,
         amount_value=amount_value,
         partner=data.partner,
-        status="Completed",
-        completed_at=datetime.utcnow()
+        status=redemption_status
     )
 
     try:
         db.add(redemption)
+        db.flush()  # Flush to check for errors before commit
+
+        # If Cashback redemption, instantly credit to primary account
+        if data.redemption_type == "Cashback":
+            try:
+                # Find primary savings account
+                primary_account = db.query(Accounts).filter(
+                    Accounts.user_id == current_user.id,
+                    Accounts.account_type == "savings"
+                ).order_by(Accounts.id).first()
+
+                if not primary_account:
+                    # Fallback to first account
+                    primary_account = db.query(Accounts).filter(
+                        Accounts.user_id == current_user.id
+                    ).order_by(Accounts.id).first()
+
+                if primary_account:
+                    # Update account balance using Decimal for precision
+                    current_balance = Decimal(
+                        str(primary_account.balance or 0))
+                    amount_decimal = Decimal(str(amount_value))
+                    primary_account.balance = current_balance + amount_decimal
+
+                    # Create credit transaction with HD Cashback label
+                    credit_txn = Transactions(
+                        account_id=primary_account.id,
+                        txn_type="credit",
+                        amount=amount_decimal,
+                        description="HD Cashback",
+                        merchant="HD Banking Rewards",
+                        category="Cashback",
+                        currency="INR",
+                        txn_date=datetime.now(),
+                        status="posted"
+                    )
+
+                    db.add(primary_account)
+                    db.add(credit_txn)
+            except Exception as cashback_err:
+                logging.error(f"Error preparing cashback: {str(cashback_err)}")
+                # Continue - cashback will fail but redemption is still valid
+
+        # Now commit everything together
         db.commit()
         db.refresh(redemption)
+
+        logging.info(
+            f"✓ Redemption created - User: {current_user.id}, Type: {data.redemption_type}, Points: {data.points_to_use}, Status: {redemption_status}, ID: {redemption.id}")
+
         return redemption
-    except IntegrityError:
+    except IntegrityError as ie:
         db.rollback()
+        logging.error(f"IntegrityError creating redemption: {str(ie)}")
         raise HTTPException(
             status_code=400, detail="Error creating redemption")
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Error creating redemption: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Error: {str(e)}")
 
 
 # ================= REFERRALS =================
