@@ -10,6 +10,86 @@
   color: #ffffff;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
+  position: relative;
+}
+
+/* ================= HAMBURGER MENU ================= */
+
+.hamburger-menu {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 101;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9));
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.hamburger-menu:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.hamburger-menu span {
+  display: block;
+  width: 24px;
+  height: 2.5px;
+  background: #ffffff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-menu.active span:nth-child(1) {
+  transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger-menu.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-menu.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
+}
+
+/* ================= SIDEBAR OVERLAY ================= */
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Show overlay on mobile when sidebar is open */
+@media (max-width: 768px) {
+  .sidebar-overlay {
+    display: block;
+  }
 }
 
 /* ================= SIDEBAR ================= */
@@ -20,6 +100,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  transition: transform 0.3s ease;
 }
 
 .glass {
@@ -84,9 +165,16 @@
 .dash-content {
   flex: 1;
   padding: 36px 42px;
-  padding-left: calc(260px + 42px);
-  /* sidebar width + spacing */
   position: relative;
+  /* Desktop ONLY: sidebar is alongside, not overlaid */
+}
+
+/* Desktop layout - sidebar visible */
+@media (min-width: 769px) {
+  .dash-content {
+    padding-left: calc(260px + 42px);
+    /* sidebar width + spacing */
+  }
 }
 
 
@@ -1270,4 +1358,620 @@ progress.budget-danger::-webkit-progress-value {
   background: #1e293b;
   color: #e2e8f0;
   padding: 8px 12px;
+}
+
+/* ================= MOBILE RESPONSIVE DESIGN ================= */
+
+/* Tablets (iPad, etc.) - 768px and below */
+@media (max-width: 768px) {
+  .dash-shell {
+    flex-direction: column;
+    width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Show hamburger menu on mobile */
+  .hamburger-menu {
+    display: flex;
+  }
+
+  /* CRITICAL: Sidebar must not take space in the layout */
+  .dash-sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    padding: 24px 16px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: none;
+    transition: left 0.3s ease;
+    z-index: 100;
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(31, 41, 55, 0.95));
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+    flex-grow: 0;
+    /* CRITICAL: Don't let flex container allocate space to this fixed element */
+    margin: 0;
+    order: -1;
+  }
+
+  /* Slide sidebar in when mobile-open class is active */
+  .dash-sidebar.mobile-open {
+    left: 0;
+  }
+
+  .dash-logo {
+    width: 120px;
+    margin-bottom: 20px;
+  }
+
+  .dash-nav {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: auto;
+    width: 100%;
+  }
+
+  .dash-nav button {
+    padding: 12px 16px;
+    font-size: 14px;
+    border-radius: 10px;
+    width: 100%;
+    text-align: left;
+  }
+
+  .logout-btn {
+    padding: 12px 16px;
+    font-size: 14px;
+    border-radius: 10px;
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  /* CRITICAL: Reset left padding for mobile - content takes full width */
+  .dash-content {
+    padding: 24px 18px;
+    margin-top: 60px;
+    flex: 1;
+    width: 100%;
+    min-height: calc(100vh - 60px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* CRITICAL: Remove sidebar padding calculation */
+    padding-left: 18px !important;
+    order: 0;
+  }
+
+  .dash-title {
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+
+  .dash-sub {
+    font-size: 12px;
+    margin-bottom: 18px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .glass-card {
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+
+  .glass-card span {
+    font-size: 12px;
+  }
+
+  .glass-card strong {
+    font-size: 18px;
+  }
+
+  .glass-card small {
+    font-size: 11px;
+  }
+
+  /* Sections */
+  .section-title {
+    font-size: 16px;
+    margin: 20px 0 10px;
+  }
+
+  /* Cards Layout */
+  .card {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+
+  .summary-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* Small Tablets and Large Phones - 600px and below */
+@media (max-width: 600px) {
+  .dash-shell {
+    width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .hamburger-menu {
+    display: flex;
+  }
+
+  .dash-sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    padding: 24px 16px;
+    transition: left 0.3s ease;
+    z-index: 100;
+    flex-shrink: 0;
+    flex-grow: 0;
+    margin: 0;
+    order: -1;
+  }
+
+  .dash-sidebar.mobile-open {
+    left: 0;
+  }
+
+  .dash-logo {
+    width: 100px;
+    margin-bottom: 20px;
+  }
+
+  .dash-nav {
+    gap: 8px;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .dash-nav button {
+    padding: 12px 16px;
+    font-size: 13px;
+    width: 100%;
+  }
+
+  .logout-btn {
+    width: 100%;
+    margin-top: auto;
+  }
+
+  .dash-content {
+    padding: 16px 12px;
+    margin-top: 60px;
+    flex: 1;
+    width: 100%;
+    min-height: calc(100vh - 60px);
+    padding-left: 12px !important;
+    overflow-y: auto;
+    order: 0;
+  }
+
+  .dash-title {
+    font-size: 18px;
+  }
+
+  .dash-sub {
+    font-size: 11px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .glass-card {
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+
+  .glass-card span {
+    font-size: 11px;
+  }
+
+  .glass-card strong {
+    font-size: 16px;
+    margin-top: 4px;
+  }
+
+  .glass-card small {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  /* Section titles */
+  .section-title {
+    font-size: 14px;
+    margin: 16px 0 8px;
+  }
+
+  /* Tables and Lists */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  thead th {
+    padding: 8px 6px;
+  }
+
+  tbody td {
+    padding: 8px 6px;
+  }
+
+  /* Forms */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select,
+  .form-input {
+    padding: 10px 12px !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+  }
+
+  label,
+  .form-label {
+    font-size: 13px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .form-button,
+  .btn-primary,
+  button[type="submit"] {
+    padding: 10px 20px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+  }
+
+  /* Modal adjustments */
+  .modal {
+    width: 90vw !important;
+    max-height: 90vh !important;
+  }
+
+  /* Sidebar for mobile - hamburger menu if needed */
+  .hamburger-menu {
+    display: block;
+  }
+}
+
+/* Extra Small Phones - 480px and below */
+@media (max-width: 480px) {
+  .hamburger-menu {
+    display: flex;
+  }
+
+  .dash-shell {
+    min-height: auto;
+  }
+
+  .dash-sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    padding: 24px 16px;
+    transition: left 0.3s ease;
+    z-index: 100;
+    flex-shrink: 0;
+    flex-grow: 0;
+    margin: 0;
+    order: -1;
+  }
+
+  .dash-sidebar.mobile-open {
+    left: 0;
+  }
+
+  .dash-logo {
+    width: 80px;
+    margin-bottom: 20px;
+  }
+
+  .dash-nav {
+    gap: 8px;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .dash-nav button {
+    padding: 12px 16px;
+    font-size: 13px;
+    width: 100%;
+  }
+
+  .logout-btn {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+
+  .dash-content {
+    padding: 12px 10px;
+    margin-top: 60px;
+    flex: 1;
+    width: 100%;
+    min-height: calc(100vh - 60px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-left: 10px !important;
+    order: 0;
+  }
+
+  .dash-title {
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+
+  .dash-sub {
+    font-size: 10px;
+    margin-bottom: 12px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .glass-card {
+    padding: 10px 12px;
+  }
+
+  .glass-card span {
+    font-size: 10px;
+  }
+
+  .glass-card strong {
+    font-size: 14px;
+    margin-top: 3px;
+  }
+
+  .glass-card small {
+    font-size: 9px;
+    margin-top: 2px;
+  }
+
+  .section-title {
+    font-size: 12px;
+    margin: 12px 0 6px;
+  }
+
+  /* Buttons on mobile */
+  .form-button,
+  .btn-primary,
+  button[type="submit"],
+  .action-btn {
+    padding: 8px 16px !important;
+    font-size: 12px !important;
+    width: 100%;
+  }
+
+  /* Input fields */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select,
+  .form-input {
+    padding: 8px 10px !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
+  }
+
+  /* Metric bar */
+  .metric-bar {
+    margin-top: 8px;
+    height: 3px;
+  }
+
+  .metric-bar-fill {
+    height: 100%;
+  }
+
+  /* Text sizing */
+  strong {
+    font-weight: 700;
+  }
+
+  small {
+    font-size: 10px;
+  }
+
+  /* Account cards */
+  .account-card {
+    padding: 12px;
+    flex-direction: column;
+  }
+
+  .acc-left,
+  .acc-right {
+    width: 100%;
+  }
+
+  .acc-right {
+    text-align: left;
+    margin-top: 8px;
+  }
+
+  /* Transaction list */
+  .tx-row {
+    padding: 10px 8px;
+  }
+
+  .tx-left {
+    gap: 8px;
+  }
+
+  .tx-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .tx-merchant {
+    font-size: 12px;
+  }
+
+  .tx-category {
+    font-size: 11px;
+  }
+
+  .tx-amount {
+    font-size: 13px;
+  }
+
+  .tx-date {
+    font-size: 10px;
+  }
+
+  /* Profile info on mobile */
+  .profile {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .profile-info {
+    text-align: center;
+  }
+
+  .profile-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  /* Modal/Dialog */
+  .modal,
+  .dialog {
+    width: 95vw !important;
+    margin: auto !important;
+    border-radius: 12px !important;
+  }
+
+  /* Search box */
+  .tx-search {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  /* Alerts */
+  .alert {
+    padding: 10px 12px;
+    margin: 8px 0;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 40px 20px;
+    border-radius: 16px;
+  }
+
+  .empty-state::before {
+    font-size: 40px;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+  }
+}
+
+/* Very Small Phones - 375px and below */
+@media (max-width: 375px) {
+  .hamburger-menu {
+    display: flex;
+  }
+
+  .dash-sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    padding: 24px 16px;
+    transition: left 0.3s ease;
+    z-index: 100;
+  }
+
+  .dash-sidebar.mobile-open {
+    left: 0;
+  }
+
+  .dash-content {
+    padding: 10px 8px;
+    margin-top: 60px;
+    flex: 1;
+    width: 100%;
+    min-height: calc(100vh - 60px);
+  }
+
+  .dash-title {
+    font-size: 14px;
+  }
+
+  .glass-card {
+    padding: 8px 10px;
+  }
+
+  .glass-card strong {
+    font-size: 12px;
+  }
+
+  .form-button,
+  button[type="submit"] {
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 12px !important;
+    padding: 6px 8px !important;
+  }
+}
+
+/* Portrait orientation specific */
+@media (max-height: 600px) and (orientation: portrait) {
+  .dash-sidebar {
+    min-height: auto;
+    padding: 8px;
+  }
+
+  .dash-nav {
+    flex-wrap: wrap;
+  }
+
+  .dash-content {
+    padding: 12px;
+  }
+
+  .glass-card {
+    padding: 10px 12px;
+  }
 }

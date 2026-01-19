@@ -562,7 +562,7 @@ export default function UserSettings({ navigate }) {
                     ["Email", user.email],
                     ["KYC Status", userDetails?.kyc_status || "N/A"],
                     ["Account Status", "Active"],
-                    ["Member Since", new Date().toLocaleDateString()],
+                    ["Member Since", userDetails?.created_at ? new Date(userDetails.created_at).toLocaleDateString() : "N/A"],
                     ["Account Type", "Premium Banking"],
                 ];
                 filename = `finbank_profile_${new Date().getTime()}`;
@@ -1068,15 +1068,7 @@ export default function UserSettings({ navigate }) {
                         </div>
                     </div>
 
-                    <div className="settings-export-buttons">
-                        <button
-                            className="export-btn"
-                            onClick={() => openExportModal("notifications")}
-                            title="Export notification preferences"
-                        >
-                            Export Preferences
-                        </button>
-                    </div>
+
                 </div>
             </div>
 
@@ -1096,11 +1088,11 @@ export default function UserSettings({ navigate }) {
                         <div className="info-item">
                             <span className="info-label">Member Since</span>
                             <span className="info-value">
-                                {new Date().toLocaleDateString("en-US", {
+                                {userDetails?.created_at ? new Date(userDetails.created_at).toLocaleDateString("en-US", {
                                     year: "numeric",
                                     month: "short",
                                     day: "numeric",
-                                })}
+                                }) : "N/A"}
                             </span>
                         </div>
 

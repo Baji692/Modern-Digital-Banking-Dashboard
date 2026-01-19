@@ -150,7 +150,7 @@ export default function HomeDashboard({ user }) {
           <small>Across {accounts.length} accounts</small>
           <div className="metric-bar">
             <div
-              className="metric-bar-fill green"
+              className="metric-bar-fill blue"
               style={{
                 width: `${Math.min((totalBalance / 100000) * 100, 100)}%`,
               }}
@@ -178,7 +178,7 @@ export default function HomeDashboard({ user }) {
           <small>{monthlyIncome > 0 ? "Received" : "None yet"}</small>
           <div className="metric-bar">
             <div
-              className="metric-bar-fill blue"
+              className="metric-bar-fill green"
               style={{
                 width: `${Math.min((monthlyIncome / 100000) * 100, 100)}%`,
               }}
@@ -193,7 +193,9 @@ export default function HomeDashboard({ user }) {
           <div className="metric-bar">
             <div
               className="metric-bar-fill gold"
-              style={{ width: "60%" }}
+              style={{
+                width: `${Math.min((monthlyRewardPoints / 5000) * 100, 100)}%`,
+              }}
             ></div>
           </div>
         </div>

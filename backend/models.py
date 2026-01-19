@@ -33,7 +33,7 @@ class User(Base):
     password = Column(String(200), nullable=False)
     phone = Column(String(10), unique=True, nullable=False)
     kyc_status = Column(Enum(KYCStatus), default=KYCStatus.unverified)
-    created_at = Column(TIMESTAMP)
+    created_at = Column(TIMESTAMP, default=func.now())
 
 
 # ================= EMAIL OTP =================
