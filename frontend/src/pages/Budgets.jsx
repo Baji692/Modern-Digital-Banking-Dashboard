@@ -237,7 +237,7 @@ export default function Budgets() {
       {!loading && (
         <>
           {/* Insights Summary Panel */}
-          <BudgetInsightsSummary month={selectedMonth} year={selectedYear} />
+          <BudgetInsightsSummary month={selectedMonth} year={selectedYear} budgets={budgets} />
 
           {/* Alerts Panel */}
           <BudgetAlertsPanel month={selectedMonth} year={selectedYear} />
@@ -509,7 +509,7 @@ export default function Budgets() {
                           <span style={{
                             marginLeft: "4px",
                             paddingRight: "18px",
-                            
+
                             fontSize: "0.95em",
                             color: hoveredColumn === "amount" ? "rgba(255,255,255,0.5)" : "transparent",
                             fontWeight: "normal",

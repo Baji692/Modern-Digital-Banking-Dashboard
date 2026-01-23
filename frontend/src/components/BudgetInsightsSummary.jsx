@@ -12,14 +12,54 @@ import "./BudgetInsights.css";
  * 
  * Displayed as an addon above the main budget grid.
  * Does not modify existing UI layout.
+ * 
+ * Now accepts budgets prop to calculate dynamically from actual budget data.
  */
-export default function BudgetInsightsSummary({ month, year }) {
+export default function BudgetInsightsSummary({ month, year, budgets = [] }) {
     const [insights, setInsights] = useState(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        loadInsights();
-    }, [month, year]);
+        if (budgets && budgets.length > 0) {
+            // Calculate from budgets data directly
+            calculateInsights();
+        } else {
+            // Fallback to API if no budgets provided
+            loadInsights();
+        }
+    }, [month, year, budgets]);
+
+    const calculateInsights = () => {
+        // Filter budgets for selected month/year
+        const relevantBudgets = budgets.filter(
+            (b) => b.month === month && b.year === year
+        );
+
+        if (relevantBudgets.length === 0) {
+            setInsights(null);
+            return;
+        }
+
+        // Calculate totals
+        const totalBudget = relevantBudgets.reduce((sum, b) => sum + (b.limit_amount || 0), 0);
+        const totalSpent = relevantBudgets.reduce((sum, b) => sum + (b.spent_amount || 0), 0);
+        const remainingAmount = totalBudget - totalSpent;
+        const overallPercentUsed = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+
+        // Count overspent categories
+        const overspentCount = relevantBudgets.filter(
+            (b) => (b.spent_amount || 0) > (b.limit_amount || 0)
+        ).length;
+
+        setInsights({
+            total_budget: totalBudget,
+            total_spent: totalSpent,
+            remaining_amount: remainingAmount,
+            overall_percent_used: overallPercentUsed,
+            overspent_categories_count: overspentCount,
+            categories_count: relevantBudgets.length
+        });
+    };
 
     const loadInsights = async () => {
         if (!month || !year) return;
@@ -89,17 +129,34 @@ export default function BudgetInsightsSummary({ month, year }) {
                     <div className="insight-icon">📊</div>
                     <div className="insight-content">
                         <p className="insight-label">Overall Used</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <p className="insight-value" style={{ color: statusColor }}>
-                                {insights.overall_percent_used?.toFixed(1)}%
-                            </p>
-                            <div
-                                className="insight-progress-ring"
-                                style={{
-                                    background: `conic-gradient(${statusColor} 0deg ${(insights.overall_percent_used / 100) * 360}deg, rgba(255,255,255,0.1) ${(insights.overall_percent_used / 100) * 360}deg 360deg)`
-                                }}
-                            ></div>
-                        </div>
+                        <p className="insight-value" style={{ color: statusColor, fontSize: '18px', fontWeight: 700 }}>
+                            {insights.overall_percent_used?.toFixed(1)}%
+                        </p>
+                    </div>
+                    <div className="insight-progress-ring">
+                        <svg viewBox="0 0 100 100">
+                            {/* Background circle */}
+                            <circle
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.1)"
+                                strokeWidth="8"
+                            />
+                            {/* Progress circle */}
+                            <circle
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                fill="none"
+                                stroke={statusColor}
+                                strokeWidth="8"
+                                strokeDasharray={`${(insights.overall_percent_used / 100) * 282.7} 282.7`}
+                                strokeLinecap="round"
+                                style={{ transition: 'stroke-dasharray 0.5s ease' }}
+                            />
+                        </svg>
                     </div>
                 </div>
             </div>

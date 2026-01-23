@@ -34,6 +34,10 @@ export default function Transactions() {
 
     const [filterType, setFilterType] = useState("all");
 
+    /* ===== SORTING ===== */
+    const [sortColumn, setSortColumn] = useState("date");
+    const [sortDirection, setSortDirection] = useState("desc");
+
     /* ===== CATEGORY FILTER ===== */
     const [showCategoryFilter, setShowCategoryFilter] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -129,6 +133,67 @@ export default function Transactions() {
         return true;
     });
 
+    /* ================= SORTING LOGIC ================= */
+    const handleColumnSort = (column) => {
+        if (sortColumn === column) {
+            // Toggle direction if same column
+            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+        } else {
+            // Set new column and default direction
+            setSortColumn(column);
+            setSortDirection(column === "amount" ? "desc" : "asc");
+        }
+    };
+
+    const getSortedTransactions = () => {
+        const sorted = [...filteredTransactions].sort((a, b) => {
+            let aVal, bVal;
+
+            switch (sortColumn) {
+                case "date":
+                    aVal = new Date(a.txn_date);
+                    bVal = new Date(b.txn_date);
+                    break;
+                case "description":
+                    aVal = (a.description || "").toLowerCase();
+                    bVal = (b.description || "").toLowerCase();
+                    break;
+                case "merchant":
+                    aVal = (a.merchant || "").toLowerCase();
+                    bVal = (b.merchant || "").toLowerCase();
+                    break;
+                case "category":
+                    aVal = (a.category || "Uncategorized").toLowerCase();
+                    bVal = (b.category || "Uncategorized").toLowerCase();
+                    break;
+                case "amount":
+                    aVal = parseFloat(a.amount || 0);
+                    bVal = parseFloat(b.amount || 0);
+                    break;
+                case "type":
+                    const typeOrder = { debit: 0, credit: 1 };
+                    aVal = typeOrder[a.txn_type] || 0;
+                    bVal = typeOrder[b.txn_type] || 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (sortDirection === "asc") {
+                return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+            } else {
+                return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+            }
+        });
+
+        return sorted;
+    };
+
+    const getSortIndicator = (column) => {
+        if (sortColumn !== column) return "↓";
+        return sortDirection === "asc" ? "↑" : "↓";
+    };
+
     if (loading) return <LoadingOverlay text="Loading transactions..." />;
 
     return (
@@ -203,17 +268,59 @@ export default function Transactions() {
                 <table className="txn-table">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Description</th>
-                            <th>Merchant</th>
-                            <th>Category</th>
-                            <th>Amount</th>
-                            <th>Type</th>
+                            <th className="sortable" onClick={() => handleColumnSort("date")}>
+                                <span className="th-content">
+                                    Date
+                                    <span className="sort-indicator" data-active={sortColumn === "date"}>
+                                        {getSortIndicator("date")}
+                                    </span>
+                                </span>
+                            </th>
+                            <th className="sortable" onClick={() => handleColumnSort("description")}>
+                                <span className="th-content">
+                                    Description
+                                    <span className="sort-indicator" data-active={sortColumn === "description"}>
+                                        {getSortIndicator("description")}
+                                    </span>
+                                </span>
+                            </th>
+                            <th className="sortable" onClick={() => handleColumnSort("merchant")}>
+                                <span className="th-content">
+                                    Merchant
+                                    <span className="sort-indicator" data-active={sortColumn === "merchant"}>
+                                        {getSortIndicator("merchant")}
+                                    </span>
+                                </span>
+                            </th>
+                            <th className="sortable" onClick={() => handleColumnSort("category")}>
+                                <span className="th-content">
+                                    Category
+                                    <span className="sort-indicator" data-active={sortColumn === "category"}>
+                                        {getSortIndicator("category")}
+                                    </span>
+                                </span>
+                            </th>
+                            <th className="sortable" onClick={() => handleColumnSort("amount")}>
+                                <span className="th-content">
+                                    Amount
+                                    <span className="sort-indicator" data-active={sortColumn === "amount"}>
+                                        {getSortIndicator("amount")}
+                                    </span>
+                                </span>
+                            </th>
+                            <th className="sortable" onClick={() => handleColumnSort("type")}>
+                                <span className="th-content">
+                                    Type
+                                    <span className="sort-indicator" data-active={sortColumn === "type"}>
+                                        {getSortIndicator("type")}
+                                    </span>
+                                </span>
+                            </th>
                         </tr>
                     </thead>
 
                     <tbody>
-                        {filteredTransactions.map((t) => (
+                        {getSortedTransactions().map((t) => (
                             <tr key={t.id}>
                                 <td>{new Date(t.txn_date).toLocaleDateString()}</td>
                                 <td>

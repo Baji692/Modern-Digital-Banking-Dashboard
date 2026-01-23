@@ -1377,6 +1377,49 @@ button[disabled] {
   color: #ffffff;
 }
 
+/* ============================= */
+/* TRANSACTION TABLE SORTING */
+/* ============================= */
+
+.txn-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.txn-table th.sortable:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 0.2s ease;
+}
+
+.th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.sort-indicator {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  flex-shrink: 0;
+}
+
+.txn-table th.sortable:hover .sort-indicator {
+  opacity: 0.4;
+}
+
+.sort-indicator[data-active="true"] {
+  opacity: 1;
+  color: #22c55e;
+}
+
+.txn-table th.sortable:hover .sort-indicator {
+  opacity: 0.7;
+}
 
 /* ===== CATEGORY FILTER ===== */
 .category-filter-wrapper {
