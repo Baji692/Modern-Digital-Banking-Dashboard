@@ -7,9 +7,9 @@ def init_db():
     try:
         # This will create all tables defined in models.py if they don't exist
         Base.metadata.create_all(bind=engine)
-        print("✓ All tables created successfully!")
+        print("SUCCESS: All tables created successfully!")
     except Exception as e:
-        print(f"✗ Error creating tables: {e}")
+        print(f"ERROR creating tables: {e}")
 
 if __name__ == "__main__":
     init_db()
