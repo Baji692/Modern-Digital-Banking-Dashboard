@@ -1,11 +1,20 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
-DATABASE_URL = "postgresql://postgres:admin123@localhost/BankDashboard"
+# Load env in case it's not loaded by main.py
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:admin123@localhost/BankDashboard")
+
+# Handle Render's postgres:// vs postgresql:// issue
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(
     DATABASE_URL,
-    echo=False  # set True only if you want SQL logs
+    echo=False
 )
 
 SessionLocal = sessionmaker(
