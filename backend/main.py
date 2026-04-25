@@ -36,20 +36,30 @@ import os
 # -------------------------------------------------
 # CORS CONFIGURATION
 # -------------------------------------------------
+    
+# Create tables on startup
+@app.on_event("startup")
+def startup_event():
+    import models
+    from database import engine
+    models.Base.metadata.create_all(bind=engine)
+    print("Database tables initialized!")
+
+# CORS Configuration
+frontend_url = os.getenv("FRONTEND_URL")
 allowed_origins = [
     "http://localhost:3000",
-    "http://localhost:3001",
     "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
 ]
-
-frontend_url = os.getenv("FRONTEND_URL")
 if frontend_url:
     allowed_origins.append(frontend_url)
+    # Also allow any Vercel preview URL from your account
+    if "vercel.app" in frontend_url:
+        allowed_origins.append(frontend_url.split(".vercel.app")[0] + "-.*.vercel.app")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=allowed_origins if frontend_url else ["*"], # Fallback to all if no URL set
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
