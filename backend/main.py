@@ -53,13 +53,11 @@ allowed_origins = [
 ]
 if frontend_url:
     allowed_origins.append(frontend_url)
-    # Also allow any Vercel preview URL from your account
-    if "vercel.app" in frontend_url:
-        allowed_origins.append(frontend_url.split(".vercel.app")[0] + "-.*.vercel.app")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if frontend_url else ["*"], # Fallback to all if no URL set
+    allow_origins=allowed_origins if frontend_url else ["*"],
+    allow_origin_regex="https://.*\.vercel\.app", # This allows ALL your Vercel deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
