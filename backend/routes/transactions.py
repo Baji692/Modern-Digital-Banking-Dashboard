@@ -28,22 +28,23 @@ CATEGORY_RULES = {
 }
 
 
-# def auto_categorize(
-#     description: str,
-#     merchant: Optional[str],
-#     txn_type: str,
-# ) -> str:
-#     text = f"{description or ''} {merchant or ''}".lower()
+def auto_categorize(
+    description: str,
+    merchant: Optional[str],
+    txn_type: str,
+) -> str:
+    text = f"{description or ''} {merchant or ''}".lower()
 
-#     if txn_type.lower() == "credit":
-#         return "Income"
+    if txn_type.lower() == "credit":
+        return "Income"
 
-#     for category, keywords in CATEGORY_RULES.items():
-#         for word in keywords:
-#             if word in text:
-#                 return category
+    # Priority rules
+    for category, keywords in CATEGORY_RULES.items():
+        for word in keywords:
+            if word in text:
+                return category
 
-#     return "Uncategorized"
+    return "Uncategorized"
 
 
 # =========================================================
@@ -86,14 +87,21 @@ def get_all_transactions(
 
 @router.get("/recent")
 def recent_transactions(
+    account_id: Optional[int] = None,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    transactions = (
+    query = (
         db.query(Transactions)
         .join(Accounts)
         .filter(Accounts.user_id == current_user.id)
-        .order_by(Transactions.txn_date.desc())
+    )
+
+    if account_id:
+        query = query.filter(Transactions.account_id == account_id)
+
+    transactions = (
+        query.order_by(Transactions.txn_date.desc())
         .limit(10)
         .all()
     )
@@ -213,6 +221,7 @@ def import_transactions_csv(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # 1. Verify Account
     account = (
         db.query(Accounts)
         .filter(
@@ -229,33 +238,48 @@ def import_transactions_csv(
         raise HTTPException(
             status_code=400, detail="Only CSV files are allowed")
 
-    content = file.file.read().decode("utf-8-sig")
-    reader = csv.DictReader(io.StringIO(content))
+    # 2. Read Content
+    try:
+        content = file.file.read().decode("utf-8-sig")
+        if not content.strip():
+            raise ValueError("CSV file is empty")
+            
+        reader = csv.DictReader(io.StringIO(content))
+        
+        # Normalize column names (strip spaces and lowercase)
+        if reader.fieldnames:
+            reader.fieldnames = [f.strip().lower() for f in reader.fieldnames]
+        else:
+            raise ValueError("CSV file has no header row")
 
-    required_columns = {"txn_date", "description", "amount", "txn_type"}
-    missing = required_columns - set(reader.fieldnames or [])
-    if missing:
-        raise HTTPException(
-            status_code=400, detail=f"Missing columns: {missing}")
+        required_columns = {"txn_date", "description", "amount", "txn_type"}
+        missing = required_columns - set(reader.fieldnames)
+        if missing:
+            raise ValueError(f"Missing required columns: {', '.join(missing)}")
 
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read CSV: {str(e)}")
+
+    # 3. Process Rows
     transactions_to_insert = []
+    total_amount_change = Decimal("0.00")
 
-    for row_number, row in enumerate(reader, start=2):
-        row = {k.strip(): v.strip() for k, v in row.items() if k and v}
+    for row_number, raw_row in enumerate(reader, start=2):
+        # Clean row data
+        row = {k: v.strip() for k, v in raw_row.items() if k and v is not None}
+        
+        if not row.get("description") or not row.get("amount") or not row.get("txn_date"):
+            continue # Skip empty rows
 
         try:
-            # Try to parse datetime with time first, then fall back to date only
+            # Parse Date
             txn_date = None
             date_str = row["txn_date"]
-
-            # Try multiple datetime formats
             datetime_formats = [
-                "%Y-%m-%d %H:%M:%S",      # 2026-01-13 14:30:45
-                "%Y-%m-%d %H:%M",         # 2026-01-13 14:30
-                "%d-%m-%Y %H:%M:%S",      # 13-01-2026 14:30:45
-                "%d-%m-%Y %H:%M",         # 13-01-2026 14:30
-                "%Y-%m-%d",               # 2026-01-13 (date only)
-                "%d-%m-%Y",               # 13-01-2026 (date only)
+                "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M",
+                "%d-%m-%Y %H:%M:%S", "%d-%m-%Y %H:%M",
+                "%Y-%m-%d", "%d-%m-%Y",
+                "%m/%d/%Y", "%m/%d/%Y %H:%M"
             ]
 
             for fmt in datetime_formats:
@@ -266,58 +290,74 @@ def import_transactions_csv(
                     continue
 
             if txn_date is None:
-                raise ValueError(
-                    f"Unable to parse date: {date_str}. Use format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS")
+                raise ValueError(f"Invalid date format: {date_str}")
 
-            # If only date was provided (no time), set to noon to distinguish from default 00:00:00
             if txn_date.time() == time.min:
-                txn_date = datetime.combine(
-                    txn_date.date(), time(hour=12, minute=0))
+                txn_date = datetime.combine(txn_date.date(), time(12, 0))
 
-            amount = Decimal(row["amount"])
-            txn_type = row["txn_type"].lower()
+            # Parse Amount
+            try:
+                amount_str = row["amount"].replace(",", "").replace("₹", "").strip()
+                amount = Decimal(amount_str)
+            except:
+                raise ValueError(f"Invalid amount: {row['amount']}")
 
+            # Parse Type
+            txn_type = row["txn_type"].lower().strip()
             if txn_type not in {"debit", "credit"}:
-                raise ValueError("Invalid txn_type")
+                raise ValueError(f"Invalid txn_type: {txn_type}. Must be 'debit' or 'credit'")
 
             merchant = row.get("merchant") or None
-
             category = auto_categorize(
                 description=row["description"],
                 merchant=merchant,
                 txn_type=txn_type,
             )
 
-            # ✅ SAFE BALANCE UPDATE
-            if txn_type == "debit":
-                account.balance = (account.balance or Decimal("0.00")) - amount
-            else:
-                account.balance = (account.balance or Decimal("0.00")) + amount
-
-            transactions_to_insert.append(
-                Transactions(
-                    account_id=account_id,
-                    description=row["description"],
-                    merchant=merchant,
-                    category=category,
-                    amount=amount,
-                    currency="INR",
-                    txn_type=txn_type,
-                    status="posted",
-                    txn_date=txn_date,
-                )
+            # Create Object
+            txn = Transactions(
+                account_id=account_id,
+                description=row["description"],
+                merchant=merchant,
+                category=category,
+                amount=amount,
+                currency=row.get("currency", "INR"),
+                txn_type=txn_type,
+                status="posted",
+                txn_date=txn_date,
             )
+            
+            transactions_to_insert.append(txn)
+            
+            # Track balance update
+            if txn_type == "debit":
+                total_amount_change -= amount
+            else:
+                total_amount_change += amount
 
         except Exception as e:
+            db.rollback()
             raise HTTPException(
                 status_code=400,
-                detail=f"Row {row_number} error: {str(e)} | Data: {row}",
+                detail=f"Row {row_number} error: {str(e)}",
             )
 
-    db.bulk_save_objects(transactions_to_insert)
-    db.commit()
+    # 4. Save and Update Balance
+    if transactions_to_insert:
+        try:
+            # Add all transactions
+            for t in transactions_to_insert:
+                db.add(t)
+            
+            # Update account balance
+            account.balance = (account.balance or Decimal("0.00")) + total_amount_change
+            
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     return {
-        "message": "CSV imported successfully",
+        "message": f"Successfully imported {len(transactions_to_insert)} transactions",
         "inserted": len(transactions_to_insert),
     }

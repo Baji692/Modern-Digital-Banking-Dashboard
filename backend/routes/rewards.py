@@ -49,16 +49,18 @@ def get_rewards_summary(user_id: int, db: Session = Depends(get_db), current_use
         Transactions.account_id.in_(account_ids)
     ).all()
 
-    # Calculate reward points - IDENTICAL calculation as redeem endpoint
+    # Calculate reward points from transactions
     current_points = 0
 
-    # Calculate rewards breakdown by category for detailed view
+    # Calculate rewards breakdown by category
     reward_breakdown = {
         "shopping": 0,
         "dining": 0,
         "utilities": 0,
         "groceries": 0,
         "other": 0,
+        "referral": 0,
+        "manual": 0
     }
 
     for txn in transactions:
@@ -66,42 +68,56 @@ def get_rewards_summary(user_id: int, db: Session = Depends(get_db), current_use
             amount = float(txn.amount)
             category = (txn.category or "").lower()
 
+            pts = 0
             if "shopping" in category or "retail" in category:
-                # 2% for shopping
                 pts = int(amount * 0.02)
                 reward_breakdown["shopping"] += pts
-                current_points += pts
             elif "dining" in category or "food" in category:
-                # 3% for dining
                 pts = int(amount * 0.03)
                 reward_breakdown["dining"] += pts
-                current_points += pts
             elif "utilities" in category:
-                # 1% for utilities
                 pts = int(amount * 0.01)
                 reward_breakdown["utilities"] += pts
-                current_points += pts
             elif "groceries" in category:
-                # 1.5% for groceries
                 pts = int(amount * 0.015)
                 reward_breakdown["groceries"] += pts
-                current_points += pts
             else:
-                # 1% for others
                 pts = int(amount * 0.01)
                 reward_breakdown["other"] += pts
-                current_points += pts
+            
+            current_points += pts
 
-    total_reward_points = current_points
-    # NOTE: business rule: 100 points => ₹1 (legacy behavior used in UI)
+    # Add referral points to total and breakdown
+    try:
+        referral_points = db.query(func.coalesce(func.sum(Referrals.bonus_points), 0)).filter(
+            Referrals.referrer_id == user_id,
+            Referrals.status == "Completed"
+        ).scalar() or 0
+    except Exception:
+        referral_points = 0
+    
+    reward_breakdown["referral"] = int(referral_points)
+    
+    # Add manual points from Rewards table
+    try:
+        manual_points = db.query(func.coalesce(func.sum(Rewards.points_balance), 0)).filter(
+            Rewards.user_id == user_id
+        ).scalar() or 0
+    except Exception:
+        manual_points = 0
+    
+    reward_breakdown["manual"] = int(manual_points)
+
+    total_reward_points = current_points + int(referral_points) + int(manual_points)
+    # NOTE: business rule: 100 points => ₹1
     reward_value = total_reward_points // 100
 
-    # Subtract only COMPLETED redemptions from available points
-    # Pending redemptions are not yet processed, so they don't consume available points
+    # Subtract BOTH Completed and Pending redemptions from available points
+    # This prevents double-spending points while a request is being processed
     try:
         redeemed_sum = db.query(func.coalesce(func.sum(Redemptions.points_used), 0)).filter(
             Redemptions.user_id == user_id,
-            Redemptions.status == "Completed"
+            Redemptions.status.in_(["Completed", "Pending"])
         ).scalar() or 0
     except Exception:
         redeemed_sum = 0
@@ -109,7 +125,7 @@ def get_rewards_summary(user_id: int, db: Session = Depends(get_db), current_use
     available_points = max(0, int(total_reward_points - int(redeemed_sum)))
 
     logging.info(
-        f"User {user_id} - Total: {total_reward_points}, Redeemed: {int(redeemed_sum)}, Available: {available_points}")
+        f"User {user_id} - Total: {total_reward_points} (Txn: {current_points}, Ref: {referral_points}, Man: {manual_points}), Redeemed: {int(redeemed_sum)}, Available: {available_points}")
 
     # Get pending redemptions to show user
     try:
@@ -394,7 +410,7 @@ def redeem_points(data: RedemptionCreate, db: Session = Depends(get_db), current
         Transactions.account_id.in_(account_ids)
     ).all()
 
-    # Calculate current points - IDENTICAL to summary endpoint
+    # Calculate current points from transactions
     current_points = 0
     for txn in transactions:
         if txn.txn_type == "debit":
@@ -411,17 +427,35 @@ def redeem_points(data: RedemptionCreate, db: Session = Depends(get_db), current
             else:
                 current_points += int(amount * 0.01)
 
-    # Subtract only COMPLETED redemptions from available points
-    # Pending redemptions are not yet processed, so they don't consume available points
+    # Add referral points
+    try:
+        referral_points = db.query(func.coalesce(func.sum(Referrals.bonus_points), 0)).filter(
+            Referrals.referrer_id == current_user.id,
+            Referrals.status == "Completed"
+        ).scalar() or 0
+    except Exception:
+        referral_points = 0
+    
+    # Add manual points
+    try:
+        manual_points = db.query(func.coalesce(func.sum(Rewards.points_balance), 0)).filter(
+            Rewards.user_id == current_user.id
+        ).scalar() or 0
+    except Exception:
+        manual_points = 0
+
+    total_reward_points = current_points + int(referral_points) + int(manual_points)
+
+    # Subtract BOTH Completed and Pending redemptions from available points
     try:
         redeemed_sum = db.query(func.coalesce(func.sum(Redemptions.points_used), 0)).filter(
             Redemptions.user_id == current_user.id,
-            Redemptions.status == "Completed"
+            Redemptions.status.in_(["Completed", "Pending"])
         ).scalar() or 0
     except Exception as e:
         redeemed_sum = 0
 
-    available_points = max(0, int(current_points - int(redeemed_sum)))
+    available_points = max(0, int(total_reward_points - int(redeemed_sum)))
 
     # Check if user has enough available points
     if available_points < data.points_to_use:

@@ -48,6 +48,11 @@ export default function Transactions() {
     const [uploading, setUploading] = useState(false);
     const [accounts, setAccounts] = useState([]);
     const [accountId, setAccountId] = useState("");
+    
+    /* ===== DATE FILTER ===== */
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [isAllTime, setIsAllTime] = useState(false);
 
     /* ================= LOAD DATA ================= */
     const loadTransactions = async () => {
@@ -88,17 +93,17 @@ export default function Transactions() {
 
         setUploading(true);
         try {
-            await apiFetch(
+            const response = await apiFetch(
                 "post",
                 `/transactions/import-csv?account_id=${accountId}`,
                 formData,
                 true
             );
-            toast.success("Transactions imported successfully");
+            toast.success(response.message || "Transactions imported successfully");
             setShowUpload(false);
             setCsvFile(null);
             setAccountId("");
-            loadTransactions();
+            await loadTransactions();
         } catch (err) {
             toast.error(err.message);
         } finally {
@@ -128,6 +133,14 @@ export default function Transactions() {
             !selectedCategories.includes(t.category || "Uncategorized")
         ) {
             return false;
+        }
+
+        // Date Filter
+        if (!isAllTime) {
+            const d = new Date(t.txn_date);
+            if (d.getMonth() !== selectedMonth || d.getFullYear() !== selectedYear) {
+                return false;
+            }
         }
 
         return true;
@@ -203,6 +216,42 @@ export default function Transactions() {
                 <h1>Transactions</h1>
 
                 <div className="filter-group">
+                    {/* Month Selector */}
+                    <div className="month-selector-group">
+                        <select 
+                            className="month-select"
+                            value={isAllTime ? "all" : selectedMonth}
+                            onChange={(e) => {
+                                if (e.target.value === "all") {
+                                    setIsAllTime(true);
+                                } else {
+                                    setIsAllTime(false);
+                                    setSelectedMonth(parseInt(e.target.value));
+                                }
+                            }}
+                        >
+                            <option value="all">All Months</option>
+                            {[
+                                "January", "February", "March", "April", "May", "June",
+                                "July", "August", "September", "October", "November", "December"
+                            ].map((m, i) => (
+                                <option key={i} value={i}>{m}</option>
+                            ))}
+                        </select>
+
+                        {!isAllTime && (
+                            <select
+                                className="year-select"
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                            >
+                                {[2023, 2024, 2025, 2026].map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
+
                     <button
                         className={filterType === "all" ? "filter-active" : ""}
                         onClick={() => setFilterType("all")}
@@ -227,14 +276,14 @@ export default function Transactions() {
                         onClick={() => setShowCategoryFilter((s) => !s)}
                     >
                         <FilterIcon />
-                        <span>Filter</span>
+                        <span>Category</span>
                     </button>
 
                     <button
                         className="action-btn"
                         onClick={() => setShowUpload(true)}
                     >
-                        ⬆ Import CSV
+                        ⬆ Import
                     </button>
                 </div>
             </div>
@@ -320,64 +369,72 @@ export default function Transactions() {
                     </thead>
 
                     <tbody>
-                        {getSortedTransactions().map((t) => (
-                            <tr key={t.id}>
-                                <td>{new Date(t.txn_date).toLocaleDateString()}</td>
-                                <td>
-                                    {(() => {
-                                        const desc = t.description || "";
-                                        const isBill = /bill payment/i.test(desc);
-                                        if (isBill) {
-                                            const merchantName = t.merchant || desc.replace(/bill payment\s*[–—-]?\s*/i, "");
-                                            return (
-                                                <>
-                                                    {merchantName}
-                                                    <span className="bill-badge">Bill</span>
-                                                </>
-                                            );
-                                        }
-
-                                        return desc;
-                                    })()}
+                        {getSortedTransactions().length === 0 ? (
+                            <tr>
+                                <td colSpan="6" style={{ textAlign: "center", padding: "40px", opacity: 0.6 }}>
+                                    No transactions found matching your filters.
                                 </td>
-                                <td>{t.merchant || "-"}</td>
-                                <td>
-                                    <select
-                                        className="category-select"
-                                        value={t.category || "Uncategorized"}
-                                        onChange={async (e) => {
-                                            const newCat = e.target.value;
-                                            try {
-                                                await apiFetch("put", `/transactions/${t.id}`, { category: newCat });
-                                                setTransactions((prev) =>
-                                                    prev.map((tx) => (tx.id === t.id ? { ...tx, category: newCat } : tx))
-                                                );
-                                                toast.success("Category updated");
-                                            } catch (err) {
-                                                console.error("Category update error:", err);
-                                                toast.error(err.message || "Failed to update category");
-                                            }
-                                        }}
-                                    >
-                                        {CATEGORY_OPTIONS.map((c) => (
-                                            <option key={c} value={c}>
-                                                {c}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </td>
-                                <td
-                                    className={
-                                        t.txn_type === "credit"
-                                            ? "amount credit"
-                                            : "amount debit"
-                                    }
-                                >
-                                    ₹ {t.amount}
-                                </td>
-                                <td>{t.txn_type}</td>
                             </tr>
-                        ))}
+                        ) : (
+                            getSortedTransactions().map((t) => (
+                                <tr key={t.id}>
+                                    <td>{new Date(t.txn_date).toLocaleDateString()}</td>
+                                    <td>
+                                        {(() => {
+                                            const desc = t.description || "";
+                                            const isBill = /bill payment/i.test(desc);
+                                            if (isBill) {
+                                                const merchantName = t.merchant || desc.replace(/bill payment\s*[–—-]?\s*/i, "");
+                                                return (
+                                                    <>
+                                                        {merchantName}
+                                                        <span className="bill-badge">Bill</span>
+                                                    </>
+                                                );
+                                            }
+
+                                            return desc;
+                                        })()}
+                                    </td>
+                                    <td>{t.merchant || "-"}</td>
+                                    <td>
+                                        <select
+                                            className="category-select"
+                                            value={t.category || "Uncategorized"}
+                                            onChange={async (e) => {
+                                                const newCat = e.target.value;
+                                                try {
+                                                    await apiFetch("put", `/transactions/${t.id}`, { category: newCat });
+                                                    setTransactions((prev) =>
+                                                        prev.map((tx) => (tx.id === t.id ? { ...tx, category: newCat } : tx))
+                                                    );
+                                                    toast.success("Category updated");
+                                                } catch (err) {
+                                                    console.error("Category update error:", err);
+                                                    toast.error(err.message || "Failed to update category");
+                                                }
+                                            }}
+                                        >
+                                            {CATEGORY_OPTIONS.map((c) => (
+                                                <option key={c} value={c}>
+                                                    {c}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                    <td
+                                        className={
+                                            t.txn_type === "credit"
+                                                ? "amount credit"
+                                                : "amount debit"
+                                        }
+                                    >
+                                        ₹ {t.amount}
+                                    </td>
+                                    <td>{t.txn_type}</td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>

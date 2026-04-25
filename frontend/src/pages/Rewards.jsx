@@ -561,7 +561,9 @@ export default function Rewards() {
                 { key: "dining", label: "Dining", icon: "🍽️", color: "#ef4444" },
                 { key: "groceries", label: "Groceries", icon: "🛒", color: "#10b981" },
                 { key: "utilities", label: "Utilities", icon: "⚡", color: "#f59e0b" },
-                { key: "other", label: "Other", icon: "📌", color: "#8b5cf6" },
+                { key: "referral", label: "Referrals", icon: "🤝", color: "#ec4899" },
+                { key: "manual", label: "Bonuses", icon: "🎁", color: "#8b5cf6" },
+                { key: "other", label: "Other", icon: "📌", color: "#64748b" },
               ].map((cat) => (
                 <div key={cat.key} className="glass-card reward-category-card">
                   <div className="category-icon" style={{ borderColor: cat.color }}>

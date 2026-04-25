@@ -45,9 +45,10 @@ export default function Accounts() {
     }
   };
 
-  const loadRecentTransactions = async () => {
+  const loadRecentTransactions = async (accId = null) => {
     try {
-      const data = await apiFetch("get", "/transactions/recent");
+      const url = accId ? `/transactions/recent?account_id=${accId}` : "/transactions/recent";
+      const data = await apiFetch("get", url);
       setRecentTransactions(data || []);
     } catch (err) {
       console.error("Error loading transactions:", err);
@@ -57,8 +58,8 @@ export default function Accounts() {
 
   useEffect(() => {
     loadAccounts();
-    loadRecentTransactions();
-  }, []);
+    loadRecentTransactions(selectedAccount?.id);
+  }, [selectedAccount]);
 
   /* ================= ACCOUNT CRUD ================= */
 
@@ -150,11 +151,7 @@ export default function Accounts() {
 
   /* ================= FILTERED TRANSACTIONS ================= */
 
-  const displayedTransactions = selectedAccount
-    ? recentTransactions.filter(
-      (t) => t.account_id === selectedAccount.id
-    )
-    : recentTransactions;
+  const displayedTransactions = recentTransactions;
 
   if (loading) return <LoadingOverlay text="Loading accounts..." />;
 
