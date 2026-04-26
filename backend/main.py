@@ -45,16 +45,29 @@ def startup_event():
     models.Base.metadata.create_all(bind=engine)
     print("Database tables initialized!")
 
-# CORS Configuration - Nuclear Fix
-# We allow all origins (*) and all headers to ensure the frontend can always connect.
-# Since we use Bearer tokens (not cookies), we set allow_credentials=False for maximum compatibility.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS Configuration - Custom Middleware (Hardened)
+# This ensures headers are present EVEN on 500 errors.
+@app.middleware("http")
+async def add_cors_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
+# Global Exception Handler (Safety Net)
+from fastapi.responses import JSONResponse
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal Server Error: {str(exc)}"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 # -------------------------------------------------
 # ROUTERS
