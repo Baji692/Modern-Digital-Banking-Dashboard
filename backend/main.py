@@ -49,6 +49,15 @@ def startup_event():
 # This ensures headers are present EVEN on 500 errors.
 @app.middleware("http")
 async def add_cors_header(request, call_next):
+    if request.method == "OPTIONS":
+        return JSONResponse(
+            content="OK",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
     response = await call_next(request)
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "*"
@@ -94,6 +103,6 @@ app.include_router(goals.router)
 def root():
     return {
         "status": "FinBank API running",
-        "version": "1.0.3",
-        "cors_mode": "super-hardened"
+        "version": "1.0.4",
+        "cors_mode": "super-hardened-v2"
     }
