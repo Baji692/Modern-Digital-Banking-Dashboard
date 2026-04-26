@@ -94,6 +94,6 @@ app.include_router(goals.router)
 def root():
     return {
         "status": "FinBank API running",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "cors_mode": "super-hardened"
     }
