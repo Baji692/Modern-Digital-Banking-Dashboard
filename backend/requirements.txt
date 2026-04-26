@@ -3,10 +3,10 @@ uvicorn
 python-multipart
 pydantic
 python-jose
-bcrypt
 requests
 sqlalchemy
 psycopg2-binary
 python-dotenv
+bcrypt
+passlib[bcrypt]
 email-validator
-passlib
