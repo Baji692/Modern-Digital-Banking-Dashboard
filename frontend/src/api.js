@@ -35,8 +35,8 @@ export async function apiFetch(method, url, data = null, isForm = false) {
     // Network-level failure (server down / CORS / unreachable)
     let message = "API Error";
 
-    if (!err.response && err.message === "Network Error") {
-      message = "Network Error: could not reach API. Is the backend running at http://127.0.0.1:8000 ?";
+    if (!err.response && (err.message === "Network Error" || err.code === "ERR_NETWORK")) {
+      message = `Server not reachable at: ${API_BASE}. The backend might be sleeping or blocked by your browser/network.`;
       console.error("API Network Error:", err);
     }
 

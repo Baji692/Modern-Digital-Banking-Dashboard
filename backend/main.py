@@ -45,20 +45,13 @@ def startup_event():
     models.Base.metadata.create_all(bind=engine)
     print("Database tables initialized!")
 
-# CORS Configuration
-frontend_url = os.getenv("FRONTEND_URL")
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-if frontend_url:
-    allowed_origins.append(frontend_url)
-
+# CORS Configuration - Nuclear Fix
+# We allow all origins (*) and all headers to ensure the frontend can always connect.
+# Since we use Bearer tokens (not cookies), we set allow_credentials=False for maximum compatibility.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if frontend_url else ["*"],
-    allow_origin_regex="https://.*\.vercel\.app", # This allows ALL your Vercel deployments
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
