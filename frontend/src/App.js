@@ -26,6 +26,7 @@ import Rewards from "./pages/Rewards";
 import Insights from "./pages/Insights";
 import GoalsSettings from "./pages/GoalsSettings";
 import UserSettings from "./pages/UserSettings";
+import { API_BASE } from "./api";
 
 /* ---------------- EMAIL VALIDATION ---------------- */
 function isValidEmail(email) {
@@ -68,7 +69,7 @@ function LoginPage({ onLogin, navigate }) {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/login", {
+      const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
